@@ -2,7 +2,7 @@
 
 ## Installation
 
-All dependencies are listed in [requirements.txt](requirements.txt). You may want to install the gpu version of pytorch first, the cpu-version will be installed by default.
+Requires python 3.10+. All other dependencies are listed in [requirements.txt](requirements.txt). You may want to install the gpu version of pytorch first, the cpu-version will be installed by default.
 
 ## Directory Structure
 
