@@ -1,0 +1,11 @@
+{
+  "model": {
+    "model_name": "google/byt5-small",
+    "hyperparameters": {},
+    "checkpoint_prefix": "checkpoints"
+  },
+  "dataset": {
+    "name": "",
+    "samples": 100000
+  }
+}
