@@ -32,9 +32,14 @@ class DatasetBaseConfig(BaseModel):
     train_split_size: float
 
 
+class WandbConfig(BaseModel):
+    project: str
+
+
 class TrainConfig(BaseModel):
     model: ModelConfig
     dataset: DatasetBaseConfig
+    wandb: WandbConfig
 
 
 def load_configs(files: List[Path], default_config: Path) -> TrainConfig:

@@ -58,7 +58,7 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
             lang = doc[ds_def.language_feature]
             if lang not in language_counts:
                 language_counts[lang] = 0
-            if language_counts[lang] == ctx.dataset.samples:
+            if language_counts[lang] >= ctx.dataset.samples:
                 continue
             language_counts[lang] += 1
             final_dataset[ctx.dataset.input_feature].append(doc[ds_def.input_feature])
