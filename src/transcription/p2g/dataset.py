@@ -53,8 +53,17 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
     language_counts = {}
     for ds_def in ctx.dataset.definitions:
         logger.info(f"processing dataset: {ds_def.name}")
+        if all([(lang in language_counts and language_counts[lang] >= ctx.dataset.samples) for lang in
+                ds_def.language_splits]):
+            logger.info(f"all languages in dataset are full, moving on...")
+            continue
         ds = load_streaming_dataset(ds_def, ctx.dataset.hf_cache).shuffle(buffer_size=ctx.dataset.shuffle_buffer)
         for doc in ds:
+            # handle early stopping
+            if all([(lang in language_counts and language_counts[lang] >= ctx.dataset.samples) for lang in
+                    ds_def.language_splits]):
+                logger.info(f"all languages in dataset are full, moving on...")
+                break
             lang = doc[ds_def.language_feature]
             if lang not in language_counts:
                 language_counts[lang] = 0
