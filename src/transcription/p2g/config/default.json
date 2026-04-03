@@ -8,6 +8,7 @@
   "dataset": {
     "names": [],
     "samples": 100000,
-    "shuffle_buffer": 10000
+    "shuffle_buffer": 10000,
+    "hf_cache": "./cache/huggingface"
   }
 }

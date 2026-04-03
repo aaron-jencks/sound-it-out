@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from cascade_config import CascadeConfig
 from pydantic import BaseModel
@@ -13,14 +13,21 @@ class ModelConfig(BaseModel):
 
 
 class DatasetConfig(BaseModel):
-    names: List[str]
+    name: str
+    split: str
+    subset: Optional[str]
+
+
+class DatasetBaseConfig(BaseModel):
+    names: List[DatasetConfig]
     samples: int
     shuffle_buffer: int
+    hf_cache: Path
 
 
 class TrainConfig(BaseModel):
     model: ModelConfig
-    dataset: DatasetConfig
+    dataset: DatasetBaseConfig
 
 
 def load_configs(files: List[Path], default_config: Path) -> TrainConfig:
