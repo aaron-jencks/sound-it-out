@@ -57,7 +57,7 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
                 ds_def.language_splits]):
             logger.info(f"all languages in dataset are full, moving on...")
             continue
-        ds = load_streaming_dataset(ds_def, ctx.dataset.hf_cache).shuffle(buffer_size=ctx.dataset.shuffle_buffer)
+        ds = load_streaming_dataset(ds_def, ctx.dataset.hf_cache).shuffle(seed=ctx.random_seed, buffer_size=ctx.dataset.shuffle_buffer)
         for doc in ds:
             # handle early stopping
             if all([(lang in language_counts and language_counts[lang] >= ctx.dataset.samples) for lang in
@@ -78,4 +78,4 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
     pbar.close()
 
     # Create an in-memory dataset
-    return Dataset.from_dict(final_dataset).train_test_split(train_size=ctx.dataset.train_split_size)
+    output_ds = Dataset.from_dict(final_dataset).train_test_split(seed=ctx.random_seed, train_size=ctx.dataset.train_split_size)

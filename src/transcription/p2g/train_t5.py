@@ -6,7 +6,8 @@ from pathlib import Path
 import evaluate
 import numpy as np
 import torch
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSeq2Seq, Seq2SeqTrainer, Seq2SeqTrainingArguments
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSeq2Seq, \
+    Seq2SeqTrainer, Seq2SeqTrainingArguments, set_seed
 import wandb
 
 from config import load_configs, TrainConfig
@@ -105,6 +106,8 @@ def train(ctx: TrainConfig):
         predict_with_generate=True,
         num_train_epochs=3,
         report_to="wandb",
+        seed=ctx.random_seed,
+        data_seed=ctx.random_seed,
     )
 
     trainer = Seq2SeqTrainer(
@@ -125,6 +128,9 @@ def train(ctx: TrainConfig):
 
 def main():
     config = parse_args()
+    set_seed(config.random_seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     train(config)
 
 

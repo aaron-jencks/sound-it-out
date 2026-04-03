@@ -40,6 +40,7 @@ class TrainConfig(BaseModel):
     model: ModelConfig
     dataset: DatasetBaseConfig
     wandb: WandbConfig
+    random_seed: int
 
 
 def load_configs(files: List[Path], default_config: Path) -> TrainConfig:

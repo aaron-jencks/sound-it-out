@@ -16,5 +16,6 @@
   },
   "wandb": {
     "project": "ipa-p2g"
-  }
+  },
+  "random_seed": 42
 }
