@@ -6,6 +6,7 @@ import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSeq2Seq
 
 from config import load_configs, TrainConfig
+from dataset import create_dataset
 
 
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +22,9 @@ def parse_args() -> TrainConfig:
 
 
 def train(ctx: TrainConfig):
+    logger.info("creating dataset")
+    ds = create_dataset(ctx)
+
     logger.info('setting up training pipeline')
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -36,6 +40,7 @@ def train(ctx: TrainConfig):
 
 def main():
     config = parse_args()
+    train(config)
 
 
 if __name__ == '__main__':

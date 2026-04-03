@@ -1,5 +1,4 @@
 import logging
-import math
 from pathlib import Path
 
 from datasets import load_dataset, IterableDataset, DatasetDict, Dataset
@@ -8,6 +7,7 @@ from tqdm import tqdm
 from config import TrainConfig, DatasetConfig
 
 
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
@@ -16,14 +16,14 @@ def load_streaming_dataset(definition: DatasetConfig, cache_loc: Path) -> Iterab
         logger.info(f'loading {definition.name} from HF dataset.')
         dataset = load_dataset(
             definition.name, split=definition.split,
-            trust_remote_code=True, cache_dir=str(cache_loc),
+            cache_dir=str(cache_loc),
             streaming=True
         )
     else:
         logger.info(f'loading {definition.name}/{definition.subset} from HF subset.')
         dataset = load_dataset(
             definition.name, definition.subset, split=definition.split,
-            trust_remote_code=True, cache_dir=str(cache_loc),
+            cache_dir=str(cache_loc),
             streaming=True
         )
     return dataset
