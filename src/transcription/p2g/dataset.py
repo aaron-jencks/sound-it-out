@@ -42,7 +42,7 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
                 metadata = json.load(f)
             if metadata['seed'] == ctx.random_seed:
                 logger.info('cached dataset random seed matches')
-                return load_from_disk(ctx.dataset.output_dataset_name)
+                return load_from_disk(str(output_path_name))
         logger.info("dataset cache doesn't exist or isn't usable, creating new dataset")
 
     # count how many samples we intend to have
@@ -92,3 +92,5 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
 
     # Create an in-memory dataset
     output_ds = Dataset.from_dict(final_dataset).train_test_split(seed=ctx.random_seed, train_size=ctx.dataset.train_split_size)
+    output_ds.save_to_disk(str(output_path_name))
+    return output_ds
