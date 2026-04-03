@@ -6,7 +6,8 @@
     "checkpoint_prefix": "checkpoints"
   },
   "dataset": {
-    "name": "",
-    "samples": 100000
+    "names": [],
+    "samples": 100000,
+    "shuffle_buffer": 10000
   }
 }
