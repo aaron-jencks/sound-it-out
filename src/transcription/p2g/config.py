@@ -16,6 +16,8 @@ class DatasetConfig(BaseModel):
     name: str
     split: str
     subset: Optional[str]
+    input_feature: str
+    output_feature: str
 
 
 class DatasetBaseConfig(BaseModel):
@@ -23,6 +25,8 @@ class DatasetBaseConfig(BaseModel):
     samples: int
     shuffle_buffer: int
     hf_cache: Path
+    input_feature: str
+    output_feature: str
 
 
 class TrainConfig(BaseModel):

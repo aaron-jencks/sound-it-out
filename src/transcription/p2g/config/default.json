@@ -9,6 +9,8 @@
     "definitions": [],
     "samples": 100000,
     "shuffle_buffer": 10000,
-    "hf_cache": "./cache/huggingface"
+    "hf_cache": "./cache/huggingface",
+    "input_feature": "ipa",
+    "output_feature": "text"
   }
 }
