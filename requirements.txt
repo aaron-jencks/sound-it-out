@@ -33,6 +33,7 @@ pydantic
 pyyaml>=6
 regex>=2024.5.15
 requests>=2.32
+sacrebleu
 safetensors>=0.4
 segments
 setuptools>=61.0
