@@ -13,8 +13,9 @@ class ModelConfig(BaseModel):
 
 
 class DatasetConfig(BaseModel):
-    name: str
+    names: List[str]
     samples: int
+    shuffle_buffer: int
 
 
 class TrainConfig(BaseModel):
