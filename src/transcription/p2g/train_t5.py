@@ -1,42 +1,15 @@
 from argparse import ArgumentParser
 import logging
 from pathlib import Path
-from typing import Dict, List
 
-from cascade_config import CascadeConfig
-from pydantic import BaseModel
 import torch
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSeq2Seq
+
+from config import load_configs, TrainConfig
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-class ModelConfig(BaseModel):
-    model_name: str
-    tokenizer_name: str
-    hyperparameters: Dict
-    checkpoint_prefix: Path
-
-
-class DatasetConfig(BaseModel):
-    name: str
-    samples: int
-
-
-class TrainConfig(BaseModel):
-    model: ModelConfig
-    dataset: DatasetConfig
-
-
-def load_configs(files: List[Path], default_config: Path) -> TrainConfig:
-    conf = CascadeConfig(validation_schema=TrainConfig.model_json_schema())
-    conf.add_json(str(default_config))
-    for file in files:
-        conf.add_json(str(file))
-    ddata = conf.parse()
-    return TrainConfig.model_validate(ddata)
 
 
 def parse_args() -> TrainConfig:
