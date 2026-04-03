@@ -11,6 +11,7 @@
     "shuffle_buffer": 10000,
     "hf_cache": "./cache/huggingface",
     "input_feature": "ipa",
-    "output_feature": "text"
+    "output_feature": "text",
+    "train_split_size": 0.8
   }
 }

@@ -18,6 +18,8 @@ class DatasetConfig(BaseModel):
     subset: Optional[str]
     input_feature: str
     output_feature: str
+    language_feature: str
+    language_splits: List[str]
 
 
 class DatasetBaseConfig(BaseModel):
@@ -27,6 +29,7 @@ class DatasetBaseConfig(BaseModel):
     hf_cache: Path
     input_feature: str
     output_feature: str
+    train_split_size: float
 
 
 class TrainConfig(BaseModel):
