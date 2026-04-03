@@ -30,6 +30,8 @@ class DatasetBaseConfig(BaseModel):
     input_feature: str
     output_feature: str
     train_split_size: float
+    output_dataset_name: str
+    force_dataset_build: bool
 
 
 class WandbConfig(BaseModel):

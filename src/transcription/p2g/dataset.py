@@ -1,7 +1,8 @@
+import json
 import logging
 from pathlib import Path
 
-from datasets import load_dataset, IterableDataset, DatasetDict, Dataset
+from datasets import load_dataset, IterableDataset, DatasetDict, Dataset, load_from_disk
 from tqdm import tqdm
 
 from config import TrainConfig, DatasetConfig
@@ -31,6 +32,18 @@ def load_streaming_dataset(definition: DatasetConfig, cache_loc: Path) -> Iterab
 
 def create_dataset(ctx: TrainConfig) -> DatasetDict:
     logger.info("creating dataset")
+
+    output_path_name = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
+    if not ctx.dataset.force_dataset_build:
+        logger.info('checking for cached dataset')
+        if output_path_name.exists():
+            logger.info('cached dataset exists')
+            with open(output_path_name / 'custom_metadata.json', 'r') as f:
+                metadata = json.load(f)
+            if metadata['seed'] == ctx.random_seed:
+                logger.info('cached dataset random seed matches')
+                return load_from_disk(ctx.dataset.output_dataset_name)
+        logger.info("dataset cache doesn't exist or isn't usable, creating new dataset")
 
     # count how many samples we intend to have
     total_samples = 0

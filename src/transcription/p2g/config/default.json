@@ -12,7 +12,9 @@
     "hf_cache": "./cache/huggingface",
     "input_feature": "ipa",
     "output_feature": "text",
-    "train_split_size": 0.8
+    "train_split_size": 0.8,
+    "output_dataset_name": "constructed_ipa_dataset",
+    "force_dataset_build": false
   },
   "wandb": {
     "project": "ipa-p2g"
