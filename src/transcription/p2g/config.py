@@ -19,7 +19,7 @@ class DatasetConfig(BaseModel):
 
 
 class DatasetBaseConfig(BaseModel):
-    names: List[DatasetConfig]
+    definitions: List[DatasetConfig]
     samples: int
     shuffle_buffer: int
     hf_cache: Path
