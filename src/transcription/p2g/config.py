@@ -12,6 +12,11 @@ class ModelConfig(BaseModel):
     checkpoint_prefix: Path
 
 
+class LanguageConfig(BaseModel):
+    language: str
+    sentence_separators: str
+
+
 class DatasetConfig(BaseModel):
     name: str
     split: str
@@ -32,6 +37,7 @@ class DatasetBaseConfig(BaseModel):
     train_split_size: float
     output_dataset_name: str
     force_dataset_build: bool
+    language_separators: Dict[str, str]
 
 
 class WandbConfig(BaseModel):

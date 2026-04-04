@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from pathlib import Path
 
 from datasets import load_dataset, IterableDataset, DatasetDict, Dataset, load_from_disk
@@ -82,11 +83,18 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
                 language_counts[lang] = 0
             if language_counts[lang] >= ctx.dataset.samples:
                 continue
-            language_counts[lang] += 1
-            final_dataset[ctx.dataset.input_feature].append(doc[ds_def.input_feature])
-            final_dataset[ctx.dataset.output_feature].append(doc[ds_def.output_feature])
-            final_dataset['language'].append(lang)
-            pbar.update(1)
+            # Break down into individual sentences
+            separator_pattern = f"[{ctx.dataset.language_separators[lang]}]"
+            input_sentences = re.split(separator_pattern, doc[ds_def.input_feature])
+            output_sentences = re.split(separator_pattern, doc[ds_def.output_feature])
+            for i, o in zip(input_sentences, output_sentences):
+                if len(i) == 0 or len(o) == 0:
+                    continue
+                language_counts[lang] += 1
+                final_dataset[ctx.dataset.input_feature].append(i)
+                final_dataset[ctx.dataset.output_feature].append(o)
+                final_dataset['language'].append(lang)
+                pbar.update(1)
 
     pbar.close()
 

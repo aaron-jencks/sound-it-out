@@ -14,7 +14,8 @@
     "output_feature": "text",
     "train_split_size": 0.8,
     "output_dataset_name": "constructed_ipa_dataset",
-    "force_dataset_build": false
+    "force_dataset_build": false,
+    "language_separators": {}
   },
   "wandb": {
     "project": "ipa-p2g"
