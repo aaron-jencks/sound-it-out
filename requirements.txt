@@ -1,6 +1,6 @@
 # Requires python 3.10+
 
---extra-index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://download.pytorch.org/whl/cu126
 
 aiohttp>=3.13
 array_record>=0.8
