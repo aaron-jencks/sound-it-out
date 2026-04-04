@@ -93,4 +93,6 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
     # Create an in-memory dataset
     output_ds = Dataset.from_dict(final_dataset).train_test_split(seed=ctx.random_seed, train_size=ctx.dataset.train_split_size)
     output_ds.save_to_disk(str(output_path_name))
+    with open(output_path_name / 'custom_metadata.json', 'w+') as f:
+        json.dump({'seed': ctx.random_seed}, f)
     return output_ds

@@ -42,6 +42,34 @@ def train(ctx: TrainConfig):
         use_fast=True,
     )
 
+    def preprocess_function(examples):
+        model_inputs = tokenizer(
+            examples["ipa"],  # or whatever your source field is
+            truncation=True,
+            max_length=256,
+        )
+
+        labels = tokenizer(
+            text_target=examples["text"],  # or your target field
+            truncation=True,
+            max_length=256,
+        )
+
+        model_inputs["labels"] = labels["input_ids"]
+        return model_inputs
+
+    tokenized_train = ds['train'].map(
+        preprocess_function,
+        batched=True,
+        remove_columns=ds['train'].column_names,
+    )
+
+    tokenized_eval = ds['test'].map(
+        preprocess_function,
+        batched=True,
+        remove_columns=ds['test'].column_names,
+    )
+
     model = AutoModelForSeq2SeqLM.from_pretrained(
         ctx.model.model_name,
         device_map="auto"
@@ -113,8 +141,8 @@ def train(ctx: TrainConfig):
     trainer = Seq2SeqTrainer(
         model=model,
         args=training_args,
-        train_dataset=ds['train'],
-        eval_dataset=ds['test'],
+        train_dataset=tokenized_train,
+        eval_dataset=tokenized_eval,
         processing_class=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
