@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 import datetime as dt
 import logging
+import os
 from pathlib import Path
 
 import evaluate
@@ -62,12 +63,16 @@ def train(ctx: TrainConfig):
         preprocess_function,
         batched=True,
         remove_columns=ds['train'].column_names,
+        num_proc=os.cpu_count(),
+        cache_file_name=str(ctx.dataset.hf_cache / ctx.dataset.output_dataset_name / 'tokenized_train.arrow')
     )
 
     tokenized_eval = ds['test'].map(
         preprocess_function,
         batched=True,
         remove_columns=ds['test'].column_names,
+        num_proc=os.cpu_count(),
+        cache_file_name=str(ctx.dataset.hf_cache / ctx.dataset.output_dataset_name / 'tokenized_test.arrow')
     )
 
     model = AutoModelForSeq2SeqLM.from_pretrained(
@@ -88,6 +93,7 @@ def train(ctx: TrainConfig):
         if isinstance(predictions, tuple):
             predictions = predictions[0]
 
+        predictions = np.where(predictions != -100, predictions, tokenizer.pad_token_id)
         labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
 
         decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
@@ -121,16 +127,16 @@ def train(ctx: TrainConfig):
     training_args = Seq2SeqTrainingArguments(
         output_dir=str(ctx.model.checkpoint_prefix),
         eval_strategy="steps",
-        eval_steps=0.01,
+        eval_steps=500,
         save_strategy="steps",
-        save_steps=0.01,
+        save_steps=500,
         save_total_limit=2,
         metric_for_best_model="bleu",
         load_best_model_at_end=True,
         weight_decay=0.01,
-        logging_steps=0.01,
-        per_device_train_batch_size=8,
-        per_device_eval_batch_size=8,
+        logging_steps=500,
+        per_device_train_batch_size=6,
+        per_device_eval_batch_size=6,
         predict_with_generate=True,
         num_train_epochs=3,
         report_to="wandb",
