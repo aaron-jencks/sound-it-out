@@ -6,11 +6,18 @@ from cascade_config import CascadeConfig
 from pydantic import BaseModel
 
 
+class GenerationConfig(BaseModel):
+    max_new_tokens: int
+    num_beams: int
+    do_sample: bool
+
+
 class ModelConfig(BaseModel):
     model_name: str
     tokenizer_name: str
     hyperparameters: Dict
     checkpoint_prefix: Path
+    generation: GenerationConfig
 
 
 class LanguageConfig(BaseModel):

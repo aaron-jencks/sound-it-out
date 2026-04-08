@@ -12,7 +12,12 @@
       "warmup_steps": 0.1,
       "torch_compile": true
     },
-    "checkpoint_prefix": "checkpoints"
+    "checkpoint_prefix": "checkpoints",
+    "generation": {
+      "max_new_tokens": 128,
+      "do_sample": true,
+      "num_beams": 4
+    }
   },
   "dataset": {
     "definitions": [],

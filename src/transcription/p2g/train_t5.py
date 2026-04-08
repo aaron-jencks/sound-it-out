@@ -8,7 +8,7 @@ import evaluate
 import numpy as np
 import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSeq2Seq, \
-    Seq2SeqTrainer, Seq2SeqTrainingArguments, set_seed
+    Seq2SeqTrainer, Seq2SeqTrainingArguments, set_seed, GenerationConfig
 import wandb
 
 from config import load_configs, TrainConfig, generate_argparse
@@ -123,6 +123,12 @@ def train(ctx: TrainConfig):
         name=generate_wandb_run_name(ctx),
     )
 
+    gen_config = GenerationConfig(
+        max_new_tokens=ctx.model.generation.max_new_tokens,
+        num_beams=ctx.model.generation.num_beams,
+        do_sample=ctx.model.generation.do_sample,
+    )
+
     training_args = Seq2SeqTrainingArguments(
         output_dir=str(ctx.model.checkpoint_prefix),
         eval_strategy="steps",
@@ -134,6 +140,7 @@ def train(ctx: TrainConfig):
         load_best_model_at_end=True,
         logging_steps=0.01,
         predict_with_generate=True,
+        generation_config=gen_config,
         report_to="wandb",
         seed=ctx.random_seed,
         data_seed=ctx.random_seed,
