@@ -1,9 +1,6 @@
-from argparse import ArgumentParser
 import datetime as dt
 import logging
 import os
-from pathlib import Path
-import warnings
 
 import evaluate
 import numpy as np
@@ -18,6 +15,7 @@ from dataset import create_dataset
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logging.getLogger("transformers.generation.utils").setLevel(logging.ERROR)
 
 
 def parse_args() -> TrainConfig:
@@ -152,11 +150,6 @@ def train(ctx: TrainConfig):
         processing_class=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
-    )
-
-    warnings.filterwarnings(
-        "ignore",
-        message=".*max_new_tokens.*max_length.*",
     )
 
     trainer.train()
