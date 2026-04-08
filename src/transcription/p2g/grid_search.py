@@ -1,9 +1,11 @@
+import json
 from abc import ABC, abstractmethod
 import logging
 import multiprocessing as mp
 from pathlib import Path
 import time
 from typing import Dict, List, Union, Tuple, TypeVar
+import uuid
 
 from pydantic import BaseModel
 
@@ -85,8 +87,13 @@ def generate_grid_job(
         parameters: Dict[str, PARAMETER_TYPES],
         *proc_args
 ) -> mp.Process:
-    logger.info(f'Generating grid job with parameters {parameters}')
+    run_name = str(uuid.uuid4())
+    logger.info(f'Generating grid job {run_name} with parameters {parameters}')
     current_ctx = base_ctx.model_copy(deep=True)
+    current_ctx.model.checkpoint_prefix = current_ctx.model.checkpoint_prefix / run_name
+    current_ctx.model.checkpoint_prefix.mkdir(parents=True, exist_ok=True)
+    with open(current_ctx.model.checkpoint_prefix / 'hyperparameters.json', 'w+') as f:
+        json.dump(parameters, f, indent=2)
     current_ctx.model.hyperparameters = parameters
     logger.info(f'Starting grid process')
     proc = mp.Process(target=train, args=(current_ctx, *proc_args))
