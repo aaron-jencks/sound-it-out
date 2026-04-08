@@ -11,7 +11,7 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSe
     Seq2SeqTrainer, Seq2SeqTrainingArguments, set_seed
 import wandb
 
-from config import load_configs, TrainConfig
+from config import load_configs, TrainConfig, generate_argparse
 from dataset import create_dataset
 
 
@@ -20,9 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args() -> TrainConfig:
-    ap = ArgumentParser('trains a p2g model')
-    ap.add_argument('configs', type=Path, nargs='*', help='config files')
-    ap.add_argument('--default-config', type=Path, default=Path('config/default.json'), help='default config file')
+    ap = generate_argparse('trains a p2g model')
     args = ap.parse_args()
     return load_configs(args.configs, args.default_config)
 

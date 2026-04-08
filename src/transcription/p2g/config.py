@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -58,3 +59,11 @@ def load_configs(files: List[Path], default_config: Path) -> TrainConfig:
         conf.add_json(str(file))
     ddata = conf.parse()
     return TrainConfig.model_validate(ddata)
+
+
+def generate_argparse(description: str = '') -> ArgumentParser:
+    parser = ArgumentParser(description=description)
+    ag = parser.add_argument_group('cascading config files')
+    ag.add_argument('configs', type=Path, nargs='*', help='cascading config files to use')
+    ag.add_argument('--default-config', type=Path, default=Path('config/default.json'), help='default config file')
+    return parser
