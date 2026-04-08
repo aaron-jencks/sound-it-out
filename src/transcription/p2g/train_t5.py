@@ -38,20 +38,21 @@ def train(ctx: TrainConfig):
 
     logger.info('setting up training pipeline')
 
-    tokenizer = AutoTokenizer.from_pretrained(
+    # noinspection PyTypeChecker
+    tokenizer: AutoTokenizer = AutoTokenizer.from_pretrained(
         ctx.model.tokenizer_name,
         use_fast=True,
     )
 
     def preprocess_function(examples):
         model_inputs = tokenizer(
-            examples["ipa"],  # or whatever your source field is
+            examples["ipa"],
             truncation=True,
             max_length=256,
         )
 
         labels = tokenizer(
-            text_target=examples["text"],  # or your target field
+            text_target=examples["text"],
             truncation=True,
             max_length=256,
         )
@@ -133,15 +134,12 @@ def train(ctx: TrainConfig):
         save_total_limit=2,
         metric_for_best_model="bleu",
         load_best_model_at_end=True,
-        weight_decay=0.01,
         logging_steps=0.01,
-        per_device_train_batch_size=8,
-        per_device_eval_batch_size=8,
         predict_with_generate=True,
-        num_train_epochs=3,
         report_to="wandb",
         seed=ctx.random_seed,
         data_seed=ctx.random_seed,
+        **ctx.model.hyperparameters,
     )
 
     trainer = Seq2SeqTrainer(
