@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type, TypeVar
 
 from cascade_config import CascadeConfig
 from pydantic import BaseModel
@@ -51,14 +51,15 @@ class TrainConfig(BaseModel):
     wandb: WandbConfig
     random_seed: int
 
+CONFIG_TYPE = TypeVar('CONFIG_TYPE', bound=Type[BaseModel])
 
-def load_configs(files: List[Path], default_config: Path) -> TrainConfig:
-    conf = CascadeConfig(validation_schema=TrainConfig.model_json_schema())
+def load_configs(files: List[Path], default_config: Path, schema: CONFIG_TYPE = TrainConfig) -> CONFIG_TYPE:
+    conf = CascadeConfig(validation_schema=schema.model_json_schema())
     conf.add_json(str(default_config))
     for file in files:
         conf.add_json(str(file))
     ddata = conf.parse()
-    return TrainConfig.model_validate(ddata)
+    return schema.model_validate(ddata)
 
 
 def generate_argparse(description: str = '') -> ArgumentParser:
