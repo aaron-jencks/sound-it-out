@@ -14,7 +14,7 @@
     },
     "checkpoint_prefix": "checkpoints",
     "generation": {
-      "max_tokens": 256,
+      "max_length": 256,
       "max_new_tokens": 128,
       "do_sample": false,
       "num_beams": 4
