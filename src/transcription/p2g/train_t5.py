@@ -15,7 +15,7 @@ from dataset import create_dataset
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-logging.getLogger("transformers.generation.utils").setLevel(logging.ERROR)
+logging.getLogger("transformers.generation.utils").setLevel(logging.ERROR)  # Stop terminal vomit
 
 
 def parse_args() -> TrainConfig:
