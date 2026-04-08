@@ -79,6 +79,9 @@ def train(ctx: TrainConfig):
         device_map="auto"
     )
 
+    for k, v in ctx.model.generation.items():
+        setattr(model.generation_config, k, v)
+
     data_collator = DataCollatorForSeq2Seq(
         tokenizer=tokenizer,
         model=model,
@@ -123,10 +126,6 @@ def train(ctx: TrainConfig):
         name=generate_wandb_run_name(ctx),
     )
 
-    gen_config = {}
-    for k, v in ctx.model.generation.items():
-        gen_config[f'generation_{k}'] = v
-
     training_args = Seq2SeqTrainingArguments(
         output_dir=str(ctx.model.checkpoint_prefix),
         eval_strategy="steps",
@@ -138,7 +137,6 @@ def train(ctx: TrainConfig):
         load_best_model_at_end=True,
         logging_steps=0.01,
         predict_with_generate=True,
-        **gen_config,
         report_to="wandb",
         seed=ctx.random_seed,
         data_seed=ctx.random_seed,
