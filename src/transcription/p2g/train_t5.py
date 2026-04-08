@@ -79,6 +79,10 @@ def train(ctx: TrainConfig):
         device_map="auto"
     )
 
+    model.generation_config.pad_token_id = tokenizer.pad_token_id
+    model.generation_config.eos_token_id = tokenizer.eos_token_id
+    model.generation_config.decoder_start_token_id = tokenizer.pad_token_id
+
     data_collator = DataCollatorForSeq2Seq(
         tokenizer=tokenizer,
         model=model,
