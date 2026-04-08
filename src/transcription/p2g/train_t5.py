@@ -6,7 +6,7 @@ import evaluate
 import numpy as np
 import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSeq2Seq, \
-    Seq2SeqTrainer, Seq2SeqTrainingArguments, set_seed, GenerationConfig
+    Seq2SeqTrainer, Seq2SeqTrainingArguments, set_seed
 import wandb
 
 from config import load_configs, TrainConfig, generate_argparse

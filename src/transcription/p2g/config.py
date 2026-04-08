@@ -6,6 +6,11 @@ from cascade_config import CascadeConfig
 from pydantic import BaseModel
 
 
+class GridSearchConfig(BaseModel):
+    max_parallel_jobs: int
+    polling_interval: float
+
+
 class ModelConfig(BaseModel):
     model_name: str
     tokenizer_name: str
@@ -49,6 +54,7 @@ class WandbConfig(BaseModel):
 class TrainConfig(BaseModel):
     model: ModelConfig
     dataset: DatasetBaseConfig
+    grid_search: GridSearchConfig
     wandb: WandbConfig
     random_seed: int
 
