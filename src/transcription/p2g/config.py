@@ -61,11 +61,12 @@ class TrainConfig(BaseModel):
 
 CONFIG_TYPE = TypeVar('CONFIG_TYPE', bound=Type[BaseModel])
 
-def load_configs(files: List[Path], default_config: Path, schema: CONFIG_TYPE = TrainConfig) -> CONFIG_TYPE:
+def load_configs(files: Optional[List[Path]], default_config: Path, schema: CONFIG_TYPE = TrainConfig) -> CONFIG_TYPE:
     conf = CascadeConfig(validation_schema=schema.model_json_schema())
     conf.add_json(str(default_config))
-    for file in files:
-        conf.add_json(str(file))
+    if files is not None:
+        for file in files:
+            conf.add_json(str(file))
     ddata = conf.parse()
     return schema.model_validate(ddata)
 
