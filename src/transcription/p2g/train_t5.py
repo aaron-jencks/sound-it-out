@@ -3,6 +3,7 @@ import datetime as dt
 import logging
 import os
 from pathlib import Path
+import warnings
 
 import evaluate
 import numpy as np
@@ -151,6 +152,11 @@ def train(ctx: TrainConfig):
         processing_class=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
+    )
+
+    warnings.filterwarnings(
+        "ignore",
+        message=".*max_new_tokens.*max_length.*",
     )
 
     trainer.train()
