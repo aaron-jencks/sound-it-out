@@ -49,6 +49,7 @@ class DatasetBaseConfig(BaseModel):
 
 class WandbConfig(BaseModel):
     project: str
+    settings: Dict
 
 
 class TrainConfig(BaseModel):

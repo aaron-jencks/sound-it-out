@@ -95,6 +95,10 @@ def generate_grid_job(
     with open(current_ctx.model.checkpoint_prefix / 'hyperparameters.json', 'w+') as f:
         json.dump(parameters, f, indent=2)
     current_ctx.model.hyperparameters = parameters
+    current_ctx.wandb.settings = {
+        **parameters,
+        'run_id': run_name,
+    }
     logger.info(f'Starting grid process')
     proc = mp.Process(target=train, args=(current_ctx, *proc_args))
     proc.start()

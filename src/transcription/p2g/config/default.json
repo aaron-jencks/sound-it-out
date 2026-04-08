@@ -36,7 +36,8 @@
     "polling_interval": 10
   },
   "wandb": {
-    "project": "ipa-p2g"
+    "project": "ipa-p2g",
+    "settings": {}
   },
   "random_seed": 42
 }

@@ -123,6 +123,7 @@ def train(ctx: TrainConfig):
     wandb.init(
         project=ctx.wandb.project,
         name=generate_wandb_run_name(ctx),
+        settings=ctx.wandb.settings,
     )
 
     training_args = Seq2SeqTrainingArguments(
