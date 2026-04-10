@@ -24,12 +24,15 @@ class LanguageConfig(BaseModel):
     sentence_separators: str
 
 
-class DatasetConfig(BaseModel):
+class EvaluationDatasetConfig(BaseModel):
     name: str
     split: str
     subset: Optional[str]
     input_feature: str
     output_feature: str
+
+
+class DatasetConfig(EvaluationDatasetConfig):
     language_feature: Optional[str]
     language_splits: List[str]
 
@@ -57,6 +60,7 @@ class TrainConfig(BaseModel):
     model: ModelConfig
     dataset: DatasetBaseConfig
     grid_search: GridSearchConfig
+    evaluation_dataset: Optional[EvaluationDatasetConfig]
     wandb: WandbConfig
     random_seed: int
     cpus: int

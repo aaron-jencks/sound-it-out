@@ -3,33 +3,33 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import List
+from typing import List, Tuple, Union
 
-from datasets import load_dataset, IterableDataset, DatasetDict, Dataset, load_from_disk
+from datasets import load_dataset, IterableDataset, Dataset, load_from_disk
 from tqdm import tqdm
 from transformers import PreTrainedTokenizer
 
-from config import TrainConfig, DatasetConfig
+from config import TrainConfig, EvaluationDatasetConfig
 
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-def load_streaming_dataset(definition: DatasetConfig, cache_loc: Path) -> IterableDataset:
+def load_hf_dataset(definition: EvaluationDatasetConfig, cache_loc: Path, streaming: bool = True) -> Union[IterableDataset, Dataset]:
     if definition.subset is None:
         logger.info(f'loading {definition.name} from HF dataset.')
         dataset = load_dataset(
             definition.name, split=definition.split,
             cache_dir=str(cache_loc),
-            streaming=True
+            streaming=streaming
         )
     else:
         logger.info(f'loading {definition.name}/{definition.subset} from HF subset.')
         dataset = load_dataset(
             definition.name, definition.subset, split=definition.split,
             cache_dir=str(cache_loc),
-            streaming=True
+            streaming=streaming
         )
     return dataset
 
@@ -45,7 +45,7 @@ def generate_punctuation_regex(separators: str) -> str:
     return result
 
 
-def create_dataset(ctx: TrainConfig) -> DatasetDict:
+def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, Dataset]:
     logger.info("creating dataset")
 
     output_path_name = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
@@ -121,7 +121,7 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
 
         if check_if_languages_full(ds_language_splits):
             continue
-        ds = load_streaming_dataset(ds_def, ctx.dataset.hf_cache).shuffle(seed=ctx.random_seed, buffer_size=ctx.dataset.shuffle_buffer)
+        ds = load_hf_dataset(ds_def, ctx.dataset.hf_cache).shuffle(seed=ctx.random_seed, buffer_size=ctx.dataset.shuffle_buffer)
 
         for doc in ds:
             if documents % 10000 == 0:
@@ -184,11 +184,18 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
         )
 
     # Create an in-memory dataset
-    output_ds = Dataset.from_dict(final_dataset).train_test_split(seed=ctx.random_seed, train_size=ctx.dataset.train_split_size)
+    output_ds = Dataset.from_dict(final_dataset)
     output_ds.save_to_disk(str(output_path_name))
     with open(output_path_name / 'custom_metadata.json', 'w+') as f:
         json.dump({'seed': ctx.random_seed, 'samples': ctx.dataset.samples}, f)
-    return output_ds
+    if ctx.evaluation_dataset is None:
+        output_ds = output_ds.train_test_split(seed=ctx.random_seed, train_size=ctx.dataset.train_split_size)
+        train_ds = output_ds["train"]
+        test_ds = output_ds["test"]
+    else:
+        train_ds = output_ds
+        test_ds = load_hf_dataset(ctx.evaluation_dataset, ctx.dataset.hf_cache, streaming=False)
+    return train_ds, test_ds
 
 
 def preprocess_dataset(ctx: TrainConfig, ds: Dataset, tokenizer: PreTrainedTokenizer, cache_file: Path) -> Dataset:
