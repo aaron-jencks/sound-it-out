@@ -56,7 +56,7 @@ def generate_trainer(
 
     cache_prefix = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
     if train_ds is not None:
-        train_ds = preprocess_dataset(ctx, train_ds, tokenizer, cache_prefix / 'tokens/tokenized_train.arrow')
+        train_ds = preprocess_dataset(ctx, ctx.dataset, train_ds, tokenizer, cache_prefix / 'tokens/tokenized_train.arrow')
     if eval_ds is not None:
         eval_ds = preprocess_dataset(ctx, eval_ds, tokenizer, cache_prefix / 'tokens/tokenized_eval.arrow')
 
@@ -138,9 +138,9 @@ def generate_trainer(
 
 def train(ctx: TrainConfig):
     logger.info("creating dataset")
-    ds = create_dataset(ctx)
+    train_ds, eval_ds = create_dataset(ctx)
 
-    trainer = generate_trainer(ctx, ds["train"], ds["test"])
+    trainer = generate_trainer(ctx, train_ds, eval_ds)
 
     if ctx.wandb.enabled:
         setup_wandb(ctx)

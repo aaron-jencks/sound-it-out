@@ -9,14 +9,13 @@ from datasets import load_dataset, IterableDataset, Dataset, load_from_disk
 from tqdm import tqdm
 from transformers import PreTrainedTokenizer
 
-from config import TrainConfig, EvaluationDatasetConfig
-
+from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-def load_hf_dataset(definition: EvaluationDatasetConfig, cache_loc: Path, streaming: bool = True) -> Union[IterableDataset, Dataset]:
+def load_hf_dataset(definition: CoreDatasetConfig, cache_loc: Path, streaming: bool = True) -> Union[IterableDataset, Dataset]:
     if definition.subset is None:
         logger.info(f'loading {definition.name} from HF dataset.')
         dataset = load_dataset(
@@ -198,16 +197,20 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, Dataset]:
     return train_ds, test_ds
 
 
-def preprocess_dataset(ctx: TrainConfig, ds: Dataset, tokenizer: PreTrainedTokenizer, cache_file: Path) -> Dataset:
+def preprocess_dataset(
+        ctx: TrainConfig, ds_ctx: DatasetFeatureConfig,
+        ds: Dataset, tokenizer: PreTrainedTokenizer,
+        cache_file: Path
+) -> Dataset:
     def preprocess_function(examples):
         model_inputs = tokenizer(
-            examples[ctx.dataset.input_feature],
+            examples[ds_ctx.input_feature],
             truncation=True,
             max_length=256,
         )
 
         labels = tokenizer(
-            text_target=examples[ctx.dataset.output_feature],
+            text_target=examples[ds_ctx.output_feature],
             truncation=True,
             max_length=256,
         )

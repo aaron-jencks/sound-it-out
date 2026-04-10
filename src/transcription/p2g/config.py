@@ -24,26 +24,27 @@ class LanguageConfig(BaseModel):
     sentence_separators: str
 
 
-class EvaluationDatasetConfig(BaseModel):
-    name: str
-    split: str
-    subset: Optional[str]
+class DatasetFeatureConfig(BaseModel):
     input_feature: str
     output_feature: str
 
 
-class DatasetConfig(EvaluationDatasetConfig):
+class CoreDatasetConfig(DatasetFeatureConfig):
+    name: str
+    split: str
+    subset: Optional[str]
+
+
+class ConstructedDatasetDefinitionConfig(CoreDatasetConfig):
     language_feature: Optional[str]
     language_splits: List[str]
 
 
-class DatasetBaseConfig(BaseModel):
-    definitions: List[DatasetConfig]
+class ConstructedDatasetConfig(DatasetFeatureConfig):
+    definitions: List[ConstructedDatasetDefinitionConfig]
     samples: int
     shuffle_buffer: int
     hf_cache: Path
-    input_feature: str
-    output_feature: str
     train_split_size: float
     output_dataset_name: str
     force_dataset_build: bool
@@ -58,9 +59,9 @@ class WandbConfig(BaseModel):
 
 class TrainConfig(BaseModel):
     model: ModelConfig
-    dataset: DatasetBaseConfig
+    dataset: ConstructedDatasetConfig
     grid_search: GridSearchConfig
-    evaluation_dataset: Optional[EvaluationDatasetConfig]
+    evaluation_dataset: Optional[CoreDatasetConfig]
     wandb: WandbConfig
     random_seed: int
     cpus: int
