@@ -1,11 +1,13 @@
+from collections import Counter
 import json
 import logging
-import re
+import os
 from pathlib import Path
-from collections import Counter
+import re
 
 from datasets import load_dataset, IterableDataset, DatasetDict, Dataset, load_from_disk
 from tqdm import tqdm
+from transformers import PreTrainedTokenizer
 
 from config import TrainConfig, DatasetConfig
 
@@ -173,3 +175,29 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
     with open(output_path_name / 'custom_metadata.json', 'w+') as f:
         json.dump({'seed': ctx.random_seed, 'samples': ctx.dataset.samples}, f)
     return output_ds
+
+
+def preprocess_dataset(ctx: TrainConfig, ds: Dataset, tokenizer: PreTrainedTokenizer, cache_file: Path) -> Dataset:
+    def preprocess_function(examples):
+        model_inputs = tokenizer(
+            examples[ctx.dataset.input_feature],
+            truncation=True,
+            max_length=256,
+        )
+
+        labels = tokenizer(
+            text_target=examples[ctx.dataset.output_feature],
+            truncation=True,
+            max_length=256,
+        )
+
+        model_inputs["labels"] = labels["input_ids"]
+        return model_inputs
+
+    return ds.map(
+        preprocess_function,
+        batched=True,
+        remove_columns=ds.column_names,
+        num_proc=ctx.cpus,
+        cache_file_name=str(cache_file)
+    )

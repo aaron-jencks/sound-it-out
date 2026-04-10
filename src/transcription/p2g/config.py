@@ -58,6 +58,7 @@ class TrainConfig(BaseModel):
     grid_search: GridSearchConfig
     wandb: WandbConfig
     random_seed: int
+    cpus: int
 
 CONFIG_TYPE = TypeVar('CONFIG_TYPE', bound=Type[BaseModel])
 

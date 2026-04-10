@@ -11,7 +11,7 @@ import wandb
 
 from common import load_tokenizer
 from config import load_configs, TrainConfig, generate_argparse
-from dataset import create_dataset
+from dataset import create_dataset, preprocess_dataset
 
 
 logging.basicConfig(level=logging.INFO)
@@ -22,7 +22,10 @@ logging.getLogger("transformers.generation.utils").setLevel(logging.ERROR)  # St
 def parse_args() -> TrainConfig:
     ap = generate_argparse('trains a p2g model')
     args = ap.parse_args()
-    return load_configs(args.configs, args.default_config)
+    config = load_configs(args.configs, args.default_config)
+    if config.cpus < 0:
+        config.cpus = os.cpu_count()
+    return config
 
 
 def generate_wandb_run_name(ctx: TrainConfig) -> str:
@@ -39,37 +42,9 @@ def train(ctx: TrainConfig):
     # noinspection PyTypeChecker
     tokenizer: AutoTokenizer = load_tokenizer(ctx)
 
-    def preprocess_function(examples):
-        model_inputs = tokenizer(
-            examples["ipa"],
-            truncation=True,
-            max_length=256,
-        )
-
-        labels = tokenizer(
-            text_target=examples["text"],
-            truncation=True,
-            max_length=256,
-        )
-
-        model_inputs["labels"] = labels["input_ids"]
-        return model_inputs
-
-    tokenized_train = ds['train'].map(
-        preprocess_function,
-        batched=True,
-        remove_columns=ds['train'].column_names,
-        num_proc=os.cpu_count(),
-        cache_file_name=str(ctx.dataset.hf_cache / ctx.dataset.output_dataset_name / 'tokens/tokenized_train.arrow')
-    )
-
-    tokenized_eval = ds['test'].map(
-        preprocess_function,
-        batched=True,
-        remove_columns=ds['test'].column_names,
-        num_proc=os.cpu_count(),
-        cache_file_name=str(ctx.dataset.hf_cache / ctx.dataset.output_dataset_name / 'tokens/tokenized_test.arrow')
-    )
+    cache_prefix = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
+    tokenized_train = preprocess_dataset(ctx, ds["train"], tokenizer, cache_prefix / 'tokens/tokenized_train.arrow')
+    tokenized_eval = preprocess_dataset(ctx, ds["test"], tokenizer, cache_prefix / 'tokens/tokenized_test.arrow')
 
     model = AutoModelForSeq2SeqLM.from_pretrained(
         ctx.model.model_name,
