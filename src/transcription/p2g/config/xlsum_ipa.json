@@ -1,0 +1,11 @@
+{
+  "evaluation_datasets": [
+    {
+      "name": "mugezhang/xlsum_6lang_multirepr",
+      "split": "train",
+      "subset": "english",
+      "input_feature": "summary_ipa_stripped",
+      "output_feature": "summary"
+    }
+  ]
+}
