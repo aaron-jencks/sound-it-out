@@ -1,9 +1,9 @@
 from collections import Counter
 import json
 import logging
-import os
 from pathlib import Path
 import re
+from typing import List
 
 from datasets import load_dataset, IterableDataset, DatasetDict, Dataset, load_from_disk
 from tqdm import tqdm
@@ -86,9 +86,8 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
     language_mismatch_skips = {lang: 0 for lang in target_languages}
     language_empty_sentence_skips = {lang: 0 for lang in target_languages}
     raw_language_counts = Counter()
-    for ds_def in ctx.dataset.definitions:
-        logger.info(f"processing dataset: {ds_def.name}")
-        logger.info(f"processed {documents} documents and found {samples}/{total_samples} samples")
+
+    def check_language_status():
         for lang in target_languages:
             if language_counts[lang] < ctx.dataset.samples:
                 logger.info(
@@ -96,30 +95,48 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
                     f"(seen_docs={language_documents_seen[lang]}, skipped_docs={language_documents_skipped[lang]}, "
                     f"mismatch_skips={language_mismatch_skips[lang]}, empty_sentence_skips={language_empty_sentence_skips[lang]})"
                 )
+
+    def check_if_languages_full(ds_language_splits: List[str]) -> bool:
         if all([(lang in language_counts and language_counts[lang] >= ctx.dataset.samples) for lang in
-                ds_def.language_splits]):
+                ds_language_splits]):
             logger.info(f"all languages in dataset are full, moving on...")
+            return True
+        return False
+
+    for ds_def in ctx.dataset.definitions:
+        logger.info(f"processing dataset: {ds_def.name}")
+        logger.info(f"processed {documents} documents and found {samples}/{total_samples} samples")
+        check_language_status()
+
+        if ds_def.language_feature is None and ds_def.subset is None:
+            raise ValueError("cannot process dataset, subset and or language_feature must be defined")
+
+        ds_language_splits = ds_def.language_splits
+        if ds_def.language_feature is None:
+            logger.info(f'no language feature found, using the subset "{ds_def.subset}" by default')
+            if len(ds_def.language_splits) > 0:
+                logger.warning(
+                    f"single language configuration specified, but language splits supplied, they will be ignored")
+            ds_language_splits = [ds_def.subset]
+
+        if check_if_languages_full(ds_language_splits):
             continue
         ds = load_streaming_dataset(ds_def, ctx.dataset.hf_cache).shuffle(seed=ctx.random_seed, buffer_size=ctx.dataset.shuffle_buffer)
+
         for doc in ds:
             if documents % 10000 == 0:
                 logger.info(f"processed {documents} documents and found {samples}/{total_samples} samples")
                 observed_languages = sum(1 for count in language_documents_seen.values() if count > 0)
                 logger.info(f"there are {observed_languages}/{len(target_languages)} target languages observed so far")
                 logger.info(f"raw language counts seen so far: {dict(raw_language_counts)}")
-                for lang in target_languages:
-                    if language_counts[lang] < ctx.dataset.samples:
-                        logger.info(
-                            f"language {lang} is waiting for {ctx.dataset.samples - language_counts[lang]} samples "
-                            f"(seen_docs={language_documents_seen[lang]}, skipped_docs={language_documents_skipped[lang]}, "
-                            f"mismatch_skips={language_mismatch_skips[lang]}, empty_sentence_skips={language_empty_sentence_skips[lang]})"
-                        )
+                check_language_status()
             # handle early stopping
-            if all([(lang in language_counts and language_counts[lang] >= ctx.dataset.samples) for lang in
-                    ds_def.language_splits]):
-                logger.info(f"all languages in dataset are full, moving on...")
+            if check_if_languages_full(ds_language_splits):
                 break
-            lang = doc[ds_def.language_feature]
+            if ds_def.language_feature is not None:
+                lang = doc[ds_def.language_feature]
+            else:
+                lang = ds_def.subset
             raw_language_counts[lang] += 1
             if lang not in language_counts:
                 documents += 1
@@ -134,15 +151,12 @@ def create_dataset(ctx: TrainConfig) -> DatasetDict:
             input_sentences = [s for s in re.split(separator_pattern, doc[ds_def.input_feature]) if len(s.strip()) > 0]
             output_sentences = [s for s in re.split(separator_pattern, doc[ds_def.output_feature]) if len(s.strip()) > 0]
             if len(input_sentences) != len(output_sentences):
-                # logger.warning(f"sentences for {lang} didn't match after splitting "
-                #                f"({len(input_sentences)} vs {len(output_sentences)})")
                 language_documents_skipped[lang] += 1
                 language_mismatch_skips[lang] += 1
                 documents += 1
                 continue
             for i, o in zip(input_sentences, output_sentences):
                 if len(i) == 0 or len(o) == 0:
-                    # logger.warning(f"skipping empty sentences: ({len(i)} vs {len(o)})")
                     language_empty_sentence_skips[lang] += 1
                     continue
                 language_counts[lang] += 1

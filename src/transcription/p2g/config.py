@@ -30,7 +30,7 @@ class DatasetConfig(BaseModel):
     subset: Optional[str]
     input_feature: str
     output_feature: str
-    language_feature: str
+    language_feature: Optional[str]
     language_splits: List[str]
 
 
