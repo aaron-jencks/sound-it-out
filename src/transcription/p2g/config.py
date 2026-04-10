@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Dict, List, Optional, Type, TypeVar
+from typing import Dict, List, Optional, Type, TypeVar, Union
 
 from cascade_config import CascadeConfig
 from pydantic import BaseModel
@@ -61,7 +61,7 @@ class TrainConfig(BaseModel):
     model: ModelConfig
     dataset: ConstructedDatasetConfig
     grid_search: GridSearchConfig
-    evaluation_dataset: Optional[CoreDatasetConfig]
+    evaluation_datasets: Optional[List[CoreDatasetConfig]]
     wandb: WandbConfig
     random_seed: int
     cpus: int

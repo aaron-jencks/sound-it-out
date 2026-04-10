@@ -31,7 +31,7 @@
     "force_dataset_build": false,
     "language_separators": {}
   },
-  "evaluation_dataset": null,
+  "evaluation_datasets": null,
   "grid_search": {
     "max_parallel_jobs": 1,
     "polling_interval": 1800
