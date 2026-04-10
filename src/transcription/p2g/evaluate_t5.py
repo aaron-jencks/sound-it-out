@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -19,6 +20,9 @@ def main():
     ag.add_argument('--checkpoint', type=str, required=True, help='The checkpoint to be evaluated.')
     args = ap.parse_args()
     conf = load_configs(args.configs, args.default_config)
+
+    if conf.cpus < 0:
+        conf.cpus = os.cpu_count()
 
     if conf.evaluation_datasets is None:
         _, ds = create_dataset(conf)
