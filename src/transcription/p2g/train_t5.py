@@ -1,12 +1,15 @@
 import datetime as dt
 import logging
 import os
+from pathlib import Path
+from typing import Optional
 
+from datasets import Dataset, DatasetDict
 import evaluate
 import numpy as np
 import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSeq2Seq, \
-    Seq2SeqTrainer, Seq2SeqTrainingArguments, set_seed
+    Seq2SeqTrainer, Seq2SeqTrainingArguments, set_seed, Trainer
 import wandb
 
 from common import load_tokenizer
@@ -33,26 +36,38 @@ def generate_wandb_run_name(ctx: TrainConfig) -> str:
     return f"fine-tuning-{d_string}"
 
 
-def train(ctx: TrainConfig):
-    logger.info("creating dataset")
-    ds = create_dataset(ctx)
+def setup_wandb(ctx: TrainConfig):
+    wandb.init(
+        project=ctx.wandb.project,
+        name=generate_wandb_run_name(ctx),
+        config=ctx.wandb.settings,
+    )
 
+
+def generate_trainer(
+        ctx: TrainConfig,
+        train_ds: Optional[Dataset], eval_ds: Optional[Dataset],
+        model_checkpoint: Optional[Path] = None
+) -> Trainer:
     logger.info('setting up training pipeline')
 
     # noinspection PyTypeChecker
     tokenizer: AutoTokenizer = load_tokenizer(ctx)
 
     cache_prefix = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
-    tokenized_train = preprocess_dataset(ctx, ds["train"], tokenizer, cache_prefix / 'tokens/tokenized_train.arrow')
-    tokenized_eval = preprocess_dataset(ctx, ds["test"], tokenizer, cache_prefix / 'tokens/tokenized_test.arrow')
+    if train_ds is not None:
+        train_ds = preprocess_dataset(ctx, train_ds, tokenizer, cache_prefix / 'tokens/tokenized_train.arrow')
+    if eval_ds is not None:
+        eval_ds = preprocess_dataset(ctx, eval_ds, tokenizer, cache_prefix / 'tokens/tokenized_eval.arrow')
 
     model = AutoModelForSeq2SeqLM.from_pretrained(
-        ctx.model.model_name,
+        ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
         device_map="auto"
     )
 
-    for k, v in ctx.model.generation.items():
-        setattr(model.generation_config, k, v)
+    if model_checkpoint is None:
+        for k, v in ctx.model.generation.items():
+            setattr(model.generation_config, k, v)
 
     data_collator = DataCollatorForSeq2Seq(
         tokenizer=tokenizer,
@@ -93,12 +108,6 @@ def train(ctx: TrainConfig):
             "gen_len": round(float(np.mean(prediction_lens)), 4),
         }
 
-    wandb.init(
-        project=ctx.wandb.project,
-        name=generate_wandb_run_name(ctx),
-        config=ctx.wandb.settings,
-    )
-
     training_args = Seq2SeqTrainingArguments(
         output_dir=str(ctx.model.checkpoint_prefix),
         eval_strategy="steps",
@@ -116,20 +125,31 @@ def train(ctx: TrainConfig):
         **ctx.model.hyperparameters,
     )
 
-    trainer = Seq2SeqTrainer(
+    return Seq2SeqTrainer(
         model=model,
         args=training_args,
-        train_dataset=tokenized_train,
-        eval_dataset=tokenized_eval,
+        train_dataset=train_ds,
+        eval_dataset=eval_ds,
         processing_class=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
     )
 
+
+def train(ctx: TrainConfig):
+    logger.info("creating dataset")
+    ds = create_dataset(ctx)
+
+    trainer = generate_trainer(ctx, ds["train"], ds["test"])
+
+    if ctx.wandb.enabled:
+        setup_wandb(ctx)
+
     trainer.train()
     trainer.save_model(str(ctx.model.checkpoint_prefix / 'best'))
 
-    wandb.finish()
+    if ctx.wandb.enabled:
+        wandb.finish()
 
 
 def main():

@@ -36,6 +36,7 @@
     "polling_interval": 1800
   },
   "wandb": {
+    "enabled": true,
     "project": "ipa-p2g",
     "settings": {}
   },

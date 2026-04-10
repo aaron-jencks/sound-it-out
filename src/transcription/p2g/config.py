@@ -48,6 +48,7 @@ class DatasetBaseConfig(BaseModel):
 
 
 class WandbConfig(BaseModel):
+    enabled: bool
     project: str
     settings: Dict
 
