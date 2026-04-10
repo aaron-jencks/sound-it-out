@@ -1,15 +1,15 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from datasets import Dataset
 
-from config import generate_argparse, load_configs, TrainConfig
+from config import generate_argparse, load_configs, TrainConfig, CoreDatasetConfig
 from dataset import create_dataset, load_hf_dataset
 from train_t5 import generate_trainer
 
 
-def evaluate_dataset(ctx: TrainConfig, ds: Dataset, checkpoint: Path) -> Dict[str, float]:
-    trainer = generate_trainer(ctx, None, ds, checkpoint)
+def evaluate_dataset(ctx: TrainConfig, ds_def: Optional[CoreDatasetConfig], ds: Dataset, checkpoint: Path) -> Dict[str, float]:
+    trainer = generate_trainer(ctx, None, ds, ds_def, checkpoint)
     return trainer.evaluate()
 
 
@@ -22,7 +22,7 @@ def main():
 
     if conf.evaluation_datasets is None:
         _, ds = create_dataset(conf)
-        print(evaluate_dataset(conf, ds, args.checkpoint))
+        print(evaluate_dataset(conf, None, ds, args.checkpoint))
         return
 
     for ds_def in conf.evaluation_datasets:
@@ -31,7 +31,7 @@ def main():
             print(f"{ds_def.name}({ds_def.split})")
         else:
             print(f"{ds_def.name}:{ds_def.subset}({ds_def.split})")
-        print(evaluate_dataset(conf, ds, args.checkpoint))
+        print(evaluate_dataset(conf, ds_def, ds, args.checkpoint))
 
 
 if __name__ == "__main__":

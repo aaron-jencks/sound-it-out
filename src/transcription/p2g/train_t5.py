@@ -13,7 +13,7 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSe
 import wandb
 
 from common import load_tokenizer
-from config import load_configs, TrainConfig, generate_argparse
+from config import load_configs, TrainConfig, generate_argparse, CoreDatasetConfig
 from dataset import create_dataset, preprocess_dataset
 
 
@@ -47,6 +47,7 @@ def setup_wandb(ctx: TrainConfig):
 def generate_trainer(
         ctx: TrainConfig,
         train_ds: Optional[Dataset], eval_ds: Optional[Dataset],
+        eval_ds_def: Optional[CoreDatasetConfig] = None,
         model_checkpoint: Optional[Path] = None
 ) -> Trainer:
     logger.info('setting up training pipeline')
@@ -64,7 +65,7 @@ def generate_trainer(
     if eval_ds is not None:
         eval_ds = preprocess_dataset(
             ctx,
-            ctx.evaluation_dataset if ctx.evaluation_dataset is not None else ctx.dataset,
+            eval_ds_def if eval_ds_def is not None else ctx.dataset,
             eval_ds, tokenizer,
             cache_prefix / 'tokens/tokenized_eval.arrow'
         )
