@@ -1,4 +1,9 @@
 {
+  "model": {
+    "hyperparameters": {
+      "per_device_eval_batch_size": 16
+    }
+  },
   "evaluation_datasets": [
     {
       "name": "mugezhang/xlsum_6lang_multirepr",
