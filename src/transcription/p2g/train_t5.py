@@ -9,6 +9,7 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSe
     Seq2SeqTrainer, Seq2SeqTrainingArguments, set_seed
 import wandb
 
+from common import load_tokenizer
 from config import load_configs, TrainConfig, generate_argparse
 from dataset import create_dataset
 
@@ -36,10 +37,7 @@ def train(ctx: TrainConfig):
     logger.info('setting up training pipeline')
 
     # noinspection PyTypeChecker
-    tokenizer: AutoTokenizer = AutoTokenizer.from_pretrained(
-        ctx.model.tokenizer_name,
-        use_fast=True,
-    )
+    tokenizer: AutoTokenizer = load_tokenizer(ctx)
 
     def preprocess_function(examples):
         model_inputs = tokenizer(
