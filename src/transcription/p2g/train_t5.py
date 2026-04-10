@@ -56,9 +56,18 @@ def generate_trainer(
 
     cache_prefix = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
     if train_ds is not None:
-        train_ds = preprocess_dataset(ctx, ctx.dataset, train_ds, tokenizer, cache_prefix / 'tokens/tokenized_train.arrow')
+        train_ds = preprocess_dataset(
+            ctx, ctx.dataset,
+            train_ds, tokenizer,
+            cache_prefix / 'tokens/tokenized_train.arrow'
+        )
     if eval_ds is not None:
-        eval_ds = preprocess_dataset(ctx, eval_ds, tokenizer, cache_prefix / 'tokens/tokenized_eval.arrow')
+        eval_ds = preprocess_dataset(
+            ctx,
+            ctx.evaluation_dataset if ctx.evaluation_dataset is not None else ctx.dataset,
+            eval_ds, tokenizer,
+            cache_prefix / 'tokens/tokenized_eval.arrow'
+        )
 
     model = AutoModelForSeq2SeqLM.from_pretrained(
         ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
