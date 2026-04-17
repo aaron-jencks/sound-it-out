@@ -20,7 +20,7 @@ def tokenize_dataset(ds_def: DatasetFeatureConfig, ds, tokenizer):
     return tds
 
 
-def generate_predictions(trainer, tokenizer, tds, batch_size=64):
+def generate_predictions(trainer, tokenizer, tds, batch_size=8):
     model = trainer.model
     model.eval()
     collator = trainer.data_collator
@@ -30,13 +30,17 @@ def generate_predictions(trainer, tokenizer, tds, batch_size=64):
     for start in range(0, len(tds), batch_size):
         features = [tds[i] for i in range(start, min(start + batch_size, len(tds)))]
         batch = collator(features)
-        batch = {k: v.to(model.device) for k, v in batch.items()}
+
+        batch = {
+            k: v.to(model.device)
+            for k, v in batch.items()
+            if v is not None and k in ("input_ids", "attention_mask")
+        }
 
         with torch.no_grad():
             generated = model.generate(
                 input_ids=batch["input_ids"],
                 attention_mask=batch["attention_mask"],
-                **trainer.model.generation_config.to_diff_dict()
             )
 
         decoded = tokenizer.batch_decode(generated, skip_special_tokens=True)
