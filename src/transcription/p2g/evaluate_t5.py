@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 from datasets import Dataset
+import torch
 
 from config import generate_argparse, load_configs, TrainConfig, CoreDatasetConfig, DatasetFeatureConfig
 from dataset import create_dataset, load_hf_dataset
@@ -19,18 +20,45 @@ def tokenize_dataset(ds_def: DatasetFeatureConfig, ds, tokenizer):
     return tds
 
 
+def generate_predictions(trainer, tokenizer, tds, batch_size=8):
+    model = trainer.model
+    model.eval()
+
+    preds = []
+
+    for start in range(0, len(tds), batch_size):
+        batch = tds[start:start + batch_size]
+
+        batch = {
+            k: torch.tensor(v, device=model.device)
+            for k, v in batch.items()
+        }
+
+        with torch.no_grad():
+            generated = model.generate(
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+            )
+
+        decoded = tokenizer.batch_decode(
+            generated,
+            skip_special_tokens=True,
+        )
+        preds.extend(decoded)
+
+    return preds
+
+
 def evaluate_dataset(ctx: TrainConfig, ds_def: Optional[CoreDatasetConfig], ds: Dataset, checkpoint: Path) -> Dict[str, float]:
     trainer, tokenizer = generate_trainer(ctx, None, ds, ds_def, checkpoint)
     if ds_def is not None and ds_def.prediction_file is not None:
         tds = tokenize_dataset(ds_def if ds_def is not None else ctx.dataset, ds, tokenizer)
-        predictions = trainer.predict(tds)
-        decoded_predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+        decoded_predictions = generate_predictions(trainer, tokenizer, tds)
         result_fname = ctx.evaluation.results_prefix / ds_def.prediction_file
         result_fname.parent.mkdir(parents=True, exist_ok=True)
-        lines = '\n'.join(decoded_predictions.predictions)
+        lines = '\n'.join(decoded_predictions)
         with open(result_fname, 'w+') as f:
             f.write(lines)
-        return predictions.metrics
     return trainer.evaluate()
 
 
