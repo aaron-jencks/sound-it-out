@@ -15,21 +15,22 @@ def tokenize_dataset(ds_def: DatasetFeatureConfig, ds, tokenizer):
             batch[ds_def.input_feature]
         )
         return model_inputs
-    tds = ds.map(preprocess, batched=True)
+    tds = ds.map(preprocess, batched=True, remove_columns=ds.column_names)
     return tds
 
 
 def evaluate_dataset(ctx: TrainConfig, ds_def: Optional[CoreDatasetConfig], ds: Dataset, checkpoint: Path) -> Dict[str, float]:
     trainer, tokenizer = generate_trainer(ctx, None, ds, ds_def, checkpoint)
-    if ds_def.prediction_file is not None:
+    if ds_def is not None and ds_def.prediction_file is not None:
         tds = tokenize_dataset(ds_def if ds_def is not None else ctx.dataset, ds, tokenizer)
         predictions = trainer.predict(tds)
         decoded_predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True)
         result_fname = ctx.evaluation.results_prefix / ds_def.prediction_file
         result_fname.parent.mkdir(parents=True, exist_ok=True)
-        lines = '\n'.join(decoded_predictions)
+        lines = '\n'.join(decoded_predictions.predictions)
         with open(result_fname, 'w+') as f:
             f.write(lines)
+        return predictions.metrics
     return trainer.evaluate()
 
 
