@@ -4,15 +4,26 @@ from typing import Dict, Optional
 
 from datasets import Dataset
 
-from config import generate_argparse, load_configs, TrainConfig, CoreDatasetConfig
+from config import generate_argparse, load_configs, TrainConfig, CoreDatasetConfig, DatasetFeatureConfig
 from dataset import create_dataset, load_hf_dataset
 from train_t5 import generate_trainer
+
+
+def tokenize_dataset(ds_def: DatasetFeatureConfig, ds, tokenizer):
+    def preprocess(batch):
+        model_inputs = tokenizer(
+            batch[ds_def.input_feature]
+        )
+        return model_inputs
+    tds = ds.map(preprocess, batched=True)
+    return tds
 
 
 def evaluate_dataset(ctx: TrainConfig, ds_def: Optional[CoreDatasetConfig], ds: Dataset, checkpoint: Path) -> Dict[str, float]:
     trainer, tokenizer = generate_trainer(ctx, None, ds, ds_def, checkpoint)
     if ds_def.prediction_file is not None:
-        predictions = trainer.predict(ds)
+        tds = tokenize_dataset(ds_def if ds_def is not None else ctx.dataset, ds, tokenizer)
+        predictions = trainer.predict(tds)
         decoded_predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True)
         result_fname = ctx.evaluation.results_prefix / ds_def.prediction_file
         result_fname.parent.mkdir(parents=True, exist_ok=True)
