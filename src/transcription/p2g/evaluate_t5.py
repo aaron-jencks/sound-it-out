@@ -14,7 +14,7 @@ def evaluate_dataset(ctx: TrainConfig, ds_def: Optional[CoreDatasetConfig], ds: 
     if ds_def.prediction_file is not None:
         predictions = trainer.predict(ds)
         decoded_predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True)
-        result_fname = ctx.evaluation.result_prefix / ds_def.prediction_file
+        result_fname = ctx.evaluation.results_prefix / ds_def.prediction_file
         result_fname.parent.mkdir(parents=True, exist_ok=True)
         lines = '\n'.join(decoded_predictions)
         with open(result_fname, 'w+') as f:

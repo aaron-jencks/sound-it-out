@@ -60,7 +60,7 @@ class WandbConfig(BaseModel):
 
 class EvaluationConfig(BaseModel):
     datasets: Optional[List[CoreDatasetConfig]]
-    result_prefix: Path
+    results_prefix: Path
 
 
 class TrainConfig(BaseModel):
