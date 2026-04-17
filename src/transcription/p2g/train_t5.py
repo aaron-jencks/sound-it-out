@@ -2,7 +2,7 @@ import datetime as dt
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 from datasets import Dataset, DatasetDict
 import evaluate
@@ -49,7 +49,7 @@ def generate_trainer(
         train_ds: Optional[Dataset], eval_ds: Optional[Dataset],
         eval_ds_def: Optional[CoreDatasetConfig] = None,
         model_checkpoint: Optional[Path] = None
-) -> Trainer:
+) -> Tuple[Trainer, AutoTokenizer]:
     logger.info('setting up training pipeline')
 
     # noinspection PyTypeChecker
@@ -143,14 +143,14 @@ def generate_trainer(
         processing_class=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
-    )
+    ), tokenizer
 
 
 def train(ctx: TrainConfig):
     logger.info("creating dataset")
     train_ds, eval_ds = create_dataset(ctx)
 
-    trainer = generate_trainer(ctx, train_ds, eval_ds)
+    trainer, _ = generate_trainer(ctx, train_ds, eval_ds)
 
     if ctx.wandb.enabled:
         setup_wandb(ctx)

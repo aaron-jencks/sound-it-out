@@ -4,13 +4,17 @@
       "per_device_eval_batch_size": 16
     }
   },
-  "evaluation_datasets": [
-    {
-      "name": "mugezhang/xlsum_6lang_multirepr",
-      "split": "train",
-      "subset": "english",
-      "input_feature": "summary_ipa_stripped",
-      "output_feature": "summary"
-    }
-  ]
+  "evaluation": {
+    "datasets": [
+      {
+        "name": "mugezhang/xlsum_6lang_multirepr",
+        "split": "train",
+        "subset": "english",
+        "input_feature": "summary_ipa_stripped",
+        "output_feature": "summary",
+        "prediction_file": "xlsum_english_predictions.txt"
+      }
+    ],
+    "results_prefix": "results/xlsum"
+  }
 }

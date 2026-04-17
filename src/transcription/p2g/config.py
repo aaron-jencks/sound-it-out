@@ -33,6 +33,7 @@ class CoreDatasetConfig(DatasetFeatureConfig):
     name: str
     split: str
     subset: Optional[str]
+    prediction_file: Optional[Path]
 
 
 class ConstructedDatasetDefinitionConfig(CoreDatasetConfig):
@@ -57,18 +58,21 @@ class WandbConfig(BaseModel):
     settings: Dict
 
 
+class EvaluationConfig(BaseModel):
+    datasets: Optional[List[CoreDatasetConfig]]
+    result_prefix: Path
+
+
 class TrainConfig(BaseModel):
     model: ModelConfig
     dataset: ConstructedDatasetConfig
     grid_search: GridSearchConfig
-    evaluation_datasets: Optional[List[CoreDatasetConfig]]
+    evaluation: EvaluationConfig
     wandb: WandbConfig
     random_seed: int
     cpus: int
 
-CONFIG_TYPE = TypeVar('CONFIG_TYPE', bound=Type[BaseModel])
-
-def load_configs(files: Optional[List[Path]], default_config: Path, schema: CONFIG_TYPE = TrainConfig) -> CONFIG_TYPE:
+def load_configs(files: Optional[List[Path]], default_config: Path, schema: Type[BaseModel] = TrainConfig) -> BaseModel:
     conf = CascadeConfig(validation_schema=schema.model_json_schema())
     conf.add_json(str(default_config))
     if files is not None:
