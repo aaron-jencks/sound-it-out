@@ -4,6 +4,7 @@ from typing import Dict, Optional
 
 from datasets import Dataset
 import torch
+from tqdm import tqdm
 
 from config import generate_argparse, load_configs, TrainConfig, CoreDatasetConfig, DatasetFeatureConfig
 from dataset import create_dataset, load_hf_dataset
@@ -27,7 +28,7 @@ def generate_predictions(trainer, tokenizer, tds, batch_size=8):
 
     preds = []
 
-    for start in range(0, len(tds), batch_size):
+    for start in tqdm(range(0, len(tds), batch_size), desc="processing batches"):
         features = [tds[i] for i in range(start, min(start + batch_size, len(tds)))]
         batch = collator(features)
 
