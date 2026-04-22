@@ -78,7 +78,7 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, Dataset]:
     final_dataset = {
         ctx.dataset.input_feature: [],
         ctx.dataset.output_feature: [],
-        'language': []
+        ctx.dataset.language_feature: []
     }
     language_counts = {lang: 0 for lang in target_languages}
     language_documents_seen = {lang: 0 for lang in target_languages}
@@ -162,7 +162,7 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, Dataset]:
                 language_counts[lang] += 1
                 final_dataset[ctx.dataset.input_feature].append(i)
                 final_dataset[ctx.dataset.output_feature].append(o)
-                final_dataset['language'].append(lang)
+                final_dataset[ctx.dataset.language_feature].append(lang)
                 samples += 1
                 if language_counts[lang] >= ctx.dataset.samples:
                     logger.info("language is full, moving on...")

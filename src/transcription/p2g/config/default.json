@@ -29,10 +29,21 @@
     "hf_cache": "./cache/huggingface",
     "input_feature": "ipa",
     "output_feature": "text",
+    "language_feature": "language",
     "train_split_size": 0.8,
     "output_dataset_name": "constructed_ipa_dataset",
     "force_dataset_build": false,
-    "language_separators": {}
+    "language_separators": {},
+    "language_map": {
+      "eng": "en",
+      "spa": "es",
+      "rus": "ru",
+      "pol": "po",
+      "hin": "hi",
+      "urd": "ur",
+      "mal": "ml",
+      "tam": "tm"
+    }
   },
   "evaluation": {
     "datasets": null,

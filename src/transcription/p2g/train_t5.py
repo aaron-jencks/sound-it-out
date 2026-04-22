@@ -195,7 +195,8 @@ def train(ctx: TrainConfig):
     ds_config = DatasetFeatureConfig(
         input_feature=ctx.dataset.input_feature,
         output_feature=ctx.dataset.output_feature,
-        language_feature="language"
+        language_feature=ctx.dataset.language_feature,
+        language_map=ctx.dataset.language_map,
     )
 
     trainer, _ = generate_trainer(ctx, train_ds, eval_ds, ds_config, ds_config)
