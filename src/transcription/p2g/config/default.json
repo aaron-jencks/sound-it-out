@@ -1,7 +1,10 @@
 {
   "model": {
     "model_name": "google/byt5-small",
-    "tokenizer_name": "google/byt5-small",
+    "tokenizer": {
+      "name": "google/byt5-small",
+      "max_sequence_length": 1024
+    },
     "hyperparameters": {
       "weight_decay": 0.01,
       "num_train_epochs": 3,

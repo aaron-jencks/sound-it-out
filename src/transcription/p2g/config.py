@@ -11,9 +11,14 @@ class GridSearchConfig(BaseModel):
     polling_interval: float
 
 
+class TokenizerConfig(BaseModel):
+    name: str
+    max_sequence_length: int
+
+
 class ModelConfig(BaseModel):
     model_name: str
-    tokenizer_name: str
+    tokenizer: TokenizerConfig
     hyperparameters: Dict
     checkpoint_prefix: Path
     generation: Dict
@@ -27,6 +32,8 @@ class LanguageConfig(BaseModel):
 class DatasetFeatureConfig(BaseModel):
     input_feature: str
     output_feature: str
+    language_feature: Optional[str]
+    language_map: Dict[str, str]
 
 
 class CoreDatasetConfig(DatasetFeatureConfig):
@@ -37,7 +44,6 @@ class CoreDatasetConfig(DatasetFeatureConfig):
 
 
 class ConstructedDatasetDefinitionConfig(CoreDatasetConfig):
-    language_feature: Optional[str]
     language_splits: List[str]
 
 

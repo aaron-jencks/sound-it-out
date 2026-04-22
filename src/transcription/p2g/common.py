@@ -1,11 +1,22 @@
-from transformers import AutoTokenizer
+from typing import List
+
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 from config import TrainConfig
 
 
-def load_tokenizer(ctx: TrainConfig) -> AutoTokenizer:
+def format_language_marker(s: str) -> str:
+    return f"<lang:{s}>"
+
+
+def load_tokenizer(ctx: TrainConfig, model: AutoModelForSeq2SeqLM, extra_langs: List[str]) -> AutoTokenizer:
     # noinspection PyTypeChecker
-    return AutoTokenizer.from_pretrained(
-        ctx.model.tokenizer_name,
+    tok = AutoTokenizer.from_pretrained(
+        ctx.model.tokenizer.name,
         use_fast=True,
     )
+    tok.add_special_tokens({
+        "additional_special_tokens": list(map(format_language_marker, extra_langs)),
+    })
+    model.resize_token_embeddings(len(tok))
+    return tok

@@ -12,8 +12,8 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSe
     Seq2SeqTrainer, Seq2SeqTrainingArguments, set_seed, Trainer
 import wandb
 
-from common import load_tokenizer
-from config import load_configs, TrainConfig, generate_argparse, CoreDatasetConfig
+from common import load_tokenizer, format_language_marker
+from config import load_configs, TrainConfig, generate_argparse, DatasetFeatureConfig
 from dataset import create_dataset, preprocess_dataset
 
 
@@ -44,31 +44,55 @@ def setup_wandb(ctx: TrainConfig):
     )
 
 
+def setup_tokenizer(ctx: TrainConfig, model: AutoModelForSeq2SeqLM,
+        train_ds: Optional[Dataset], eval_ds: Optional[Dataset],
+        train_ds_def: Optional[DatasetFeatureConfig] = None,
+        eval_ds_def: Optional[DatasetFeatureConfig] = None
+) -> AutoTokenizer:
+    languages = []
+
+    if train_ds is not None:
+        long_names = train_ds.unique(train_ds_def.language_feature)
+        for ln in long_names:
+            if ln not in train_ds_def.language_map:
+                raise ValueError(f"language feature {ln} not found in language map")
+            languages.append(train_ds_def.language_map[ln])
+
+    if eval_ds is not None:
+        long_names = eval_ds.unique(eval_ds_def.language_feature)
+        for ln in long_names:
+            if ln not in eval_ds_def.language_map:
+                raise ValueError(f"language feature {ln} not found in language map")
+            languages.append(eval_ds_def.language_map[ln])
+
+    tokenizer = load_tokenizer(ctx, model, list(set(languages)))
+
+    return tokenizer
+
+
 def generate_trainer(
         ctx: TrainConfig,
         train_ds: Optional[Dataset], eval_ds: Optional[Dataset],
-        eval_ds_def: Optional[CoreDatasetConfig] = None,
+        train_ds_def: Optional[DatasetFeatureConfig] = None,
+        eval_ds_def: Optional[DatasetFeatureConfig] = None,
         model_checkpoint: Optional[Path] = None
 ) -> Tuple[Trainer, AutoTokenizer]:
     logger.info('setting up training pipeline')
 
-    # noinspection PyTypeChecker
-    tokenizer: AutoTokenizer = load_tokenizer(ctx)
+    if train_ds is None and eval_ds is None:
+        raise ValueError("train_ds and eval_ds cannot both be None")
 
-    cache_prefix = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
     if train_ds is not None:
-        train_ds = preprocess_dataset(
-            ctx, ctx.dataset,
-            train_ds, tokenizer,
-            cache_prefix / 'tokens/tokenized_train.arrow'
-        )
+        if train_ds_def is None:
+            raise ValueError("train_ds_def cannot be None if train_ds is not None")
+        if train_ds_def.language_feature is None:
+            raise ValueError("training dataset language feature cannot be None")
+
     if eval_ds is not None:
-        eval_ds = preprocess_dataset(
-            ctx,
-            eval_ds_def if eval_ds_def is not None else ctx.dataset,
-            eval_ds, tokenizer,
-            cache_prefix / 'tokens/tokenized_eval.arrow'
-        )
+        if eval_ds_def is None:
+            raise ValueError("eval_ds_def cannot be None if train_ds is not None")
+        if eval_ds_def.language_feature is None:
+            raise ValueError("evaluation dataset language feature cannot be None")
 
     model = AutoModelForSeq2SeqLM.from_pretrained(
         ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
@@ -78,6 +102,24 @@ def generate_trainer(
     if model_checkpoint is None:
         for k, v in ctx.model.generation.items():
             setattr(model.generation_config, k, v)
+
+    # noinspection PyTypeChecker
+    tokenizer = setup_tokenizer(ctx, model, train_ds, eval_ds, train_ds_def, eval_ds_def)
+
+    cache_prefix = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
+    if train_ds is not None:
+        train_ds = preprocess_dataset(
+            ctx, train_ds_def,
+            train_ds, tokenizer,
+            cache_prefix / 'tokens/tokenized_train.arrow'
+        )
+    if eval_ds is not None:
+        eval_ds = preprocess_dataset(
+            ctx,
+            eval_ds_def,
+            eval_ds, tokenizer,
+            cache_prefix / 'tokens/tokenized_eval.arrow'
+        )
 
     data_collator = DataCollatorForSeq2Seq(
         tokenizer=tokenizer,
@@ -150,7 +192,13 @@ def train(ctx: TrainConfig):
     logger.info("creating dataset")
     train_ds, eval_ds = create_dataset(ctx)
 
-    trainer, _ = generate_trainer(ctx, train_ds, eval_ds)
+    ds_config = DatasetFeatureConfig(
+        input_feature=ctx.dataset.input_feature,
+        output_feature=ctx.dataset.output_feature,
+        language_feature="language"
+    )
+
+    trainer, _ = generate_trainer(ctx, train_ds, eval_ds, ds_config, ds_config)
 
     if ctx.wandb.enabled:
         setup_wandb(ctx)

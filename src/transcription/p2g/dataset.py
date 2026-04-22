@@ -9,7 +9,8 @@ from datasets import load_dataset, IterableDataset, Dataset, load_from_disk
 from tqdm import tqdm
 from transformers import PreTrainedTokenizer
 
-from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig
+from common import format_language_marker
+from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig, EvaluationDatasetFeatureConfig
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -205,16 +206,26 @@ def preprocess_dataset(
         cache_file: Path
 ) -> Dataset:
     def preprocess_function(examples):
+        inputs = [
+            f"{format_language_marker(ds_ctx.language_map[lang])} {text}"
+            for lang, text in zip(examples[ds_ctx.language_feature], examples[ds_ctx.input_feature])
+        ]
+
         model_inputs = tokenizer(
-            examples[ds_ctx.input_feature],
+            inputs,
             truncation=True,
-            max_length=1024,
+            max_length=ctx.model.tokenizer.max_sequence_length,
         )
 
+        outputs = [
+            f"{format_language_marker(ds_ctx.language_map[lang])} {text}"
+            for lang, text in zip(examples[ds_ctx.language_feature], examples[ds_ctx.output_feature])
+        ]
+
         labels = tokenizer(
-            text_target=examples[ds_ctx.output_feature],
+            outputs,
             truncation=True,
-            max_length=1024,
+            max_length=ctx.model.tokenizer.max_sequence_length,
         )
 
         model_inputs["labels"] = labels["input_ids"]

@@ -21,7 +21,17 @@
           "hin", "urd",
           "mal", "tam"
         ],
-        "prediction_file": null
+        "prediction_file": null,
+        "language_map": {
+          "eng": "en",
+          "spa": "es",
+          "rus": "ru",
+          "pol": "po",
+          "hin": "hi",
+          "urd": "ur",
+          "mal": "ml",
+          "tam": "tm"
+        }
       }
     ],
     "language_separators": {
