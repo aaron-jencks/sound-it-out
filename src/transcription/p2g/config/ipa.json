@@ -1,4 +1,11 @@
 {
+  "model": {
+    "hyperparameters": {
+      "num_train_epochs": 5,
+      "learning_rate": 5e-4,
+      "warmup_steps": 0.2
+    }
+  },
   "dataset": {
     "definitions": [
       {
@@ -13,7 +20,8 @@
           "rus", "pol",
           "hin", "urd",
           "mal", "tam"
-        ]
+        ],
+        "prediction_file": null
       }
     ],
     "language_separators": {

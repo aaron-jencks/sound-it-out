@@ -208,13 +208,13 @@ def preprocess_dataset(
         model_inputs = tokenizer(
             examples[ds_ctx.input_feature],
             truncation=True,
-            max_length=256,
+            max_length=1024,
         )
 
         labels = tokenizer(
             text_target=examples[ds_ctx.output_feature],
             truncation=True,
-            max_length=256,
+            max_length=1024,
         )
 
         model_inputs["labels"] = labels["input_ids"]

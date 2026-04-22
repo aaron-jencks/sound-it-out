@@ -21,7 +21,7 @@
   },
   "dataset": {
     "definitions": [],
-    "samples": 100000,
+    "samples": 1000000,
     "shuffle_buffer": 10000,
     "hf_cache": "./cache/huggingface",
     "input_feature": "ipa",
