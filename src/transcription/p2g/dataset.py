@@ -10,7 +10,7 @@ from tqdm import tqdm
 from transformers import PreTrainedTokenizer
 
 from common import format_language_marker
-from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig, EvaluationDatasetFeatureConfig
+from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
