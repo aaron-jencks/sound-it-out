@@ -72,7 +72,7 @@ def analyze_dataset(
     pre_ds = preprocess_dataset(ctx, ds_def, ds, tokenizer)
     with mp.Pool(ctx.cpus) as pool:
         results = list(tqdm(
-            pool.imap(get_lengths, pre_ds),
+            pool.imap_unordered(get_lengths, pre_ds, chunksize=10000),
             total=len(pre_ds),
             desc="computing lengths"
         ))
