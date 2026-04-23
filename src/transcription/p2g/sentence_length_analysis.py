@@ -1,8 +1,9 @@
 import json
 import logging
+import multiprocessing as mp
 import os
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from datasets import Dataset
 import numpy as np
@@ -37,9 +38,31 @@ class DatasetStats(BaseModel):
     stddev: float
     min: float
     max: float
+    median: float
+    p75: float
+    p90: float
+    p95: float
+    p99: float
 
-    def __repr__(self) -> str:
-        return f"records: {self.records}\nmean {self.mean}\nstddev {self.stddev}\nmin {self.min}\nmax {self.max}"
+
+def generate_statistics(l: List[int]) -> DatasetStats:
+    med, p75, p90, p95, p99 = list(map(float, np.percentile(l, [50, 75, 90, 95, 99])))
+    return DatasetStats(
+        records=len(l),
+        mean=float(np.mean(l)),
+        stddev=float(np.std(l)),
+        min=np.min(l),
+        max=np.max(l),
+        median=med,
+        p75=p75,
+        p90=p90,
+        p95=p95,
+        p99=p99,
+    )
+
+
+def get_lengths(example):
+    return len(example["input_ids"]), len(example["labels"])
 
 
 def analyze_dataset(
@@ -47,21 +70,14 @@ def analyze_dataset(
         ds_def: NamedSplitDatasetFeatureConfig, ds: Dataset
 ) -> Tuple[DatasetStats, DatasetStats]:
     pre_ds = preprocess_dataset(ctx, ds_def, ds, tokenizer)
-    input_lengths = [len(example["input_ids"]) for example in tqdm(pre_ds, desc="computing input lengths")]
-    label_lengths = [len(example["labels"]) for example in tqdm(pre_ds, desc="computing label lengths")]
-    return DatasetStats(
-        records=len(input_lengths),
-        mean=float(np.mean(input_lengths)),
-        stddev=float(np.std(input_lengths)),
-        min=np.min(input_lengths),
-        max=np.max(input_lengths),
-    ), DatasetStats(
-        records=len(label_lengths),
-        mean=float(np.mean(label_lengths)),
-        stddev=float(np.std(label_lengths)),
-        min=np.min(label_lengths),
-        max=np.max(label_lengths),
-    )
+    with mp.Pool(ctx.cpus) as pool:
+        results = list(tqdm(
+            pool.imap(get_lengths, pre_ds),
+            total=len(pre_ds),
+            desc="computing lengths"
+        ))
+        input_lengths, label_lengths = zip(*results)
+    return generate_statistics(input_lengths), generate_statistics(label_lengths)
 
 
 def main():
