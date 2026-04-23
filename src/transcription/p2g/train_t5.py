@@ -44,7 +44,7 @@ def setup_wandb(ctx: TrainConfig):
     )
 
 
-def setup_tokenizer(ctx: TrainConfig, model: AutoModelForSeq2SeqLM,
+def setup_tokenizer(ctx: TrainConfig, model: Optional[AutoModelForSeq2SeqLM],
         train_ds: Optional[Dataset], eval_ds: Optional[Dataset],
         train_ds_def: Optional[DatasetFeatureConfig] = None,
         eval_ds_def: Optional[DatasetFeatureConfig] = None
@@ -106,19 +106,16 @@ def generate_trainer(
     # noinspection PyTypeChecker
     tokenizer = setup_tokenizer(ctx, model, train_ds, eval_ds, train_ds_def, eval_ds_def)
 
-    cache_prefix = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
     if train_ds is not None:
         train_ds = preprocess_dataset(
             ctx, train_ds_def,
-            train_ds, tokenizer,
-            cache_prefix / 'tokens/tokenized_train.arrow'
+            train_ds, tokenizer
         )
     if eval_ds is not None:
         eval_ds = preprocess_dataset(
             ctx,
             eval_ds_def,
-            eval_ds, tokenizer,
-            cache_prefix / 'tokens/tokenized_eval.arrow'
+            eval_ds, tokenizer
         )
 
     data_collator = DataCollatorForSeq2Seq(
@@ -190,16 +187,9 @@ def generate_trainer(
 
 def train(ctx: TrainConfig):
     logger.info("creating dataset")
-    train_ds, eval_ds = create_dataset(ctx)
+    train_ds, train_ds_config, eval_ds, eval_ds_config = create_dataset(ctx)
 
-    ds_config = DatasetFeatureConfig(
-        input_feature=ctx.dataset.input_feature,
-        output_feature=ctx.dataset.output_feature,
-        language_feature=ctx.dataset.language_feature,
-        language_map=ctx.dataset.language_map,
-    )
-
-    trainer, _ = generate_trainer(ctx, train_ds, eval_ds, ds_config, ds_config)
+    trainer, _ = generate_trainer(ctx, train_ds, eval_ds, train_ds_config, eval_ds_config)
 
     if ctx.wandb.enabled:
         setup_wandb(ctx)

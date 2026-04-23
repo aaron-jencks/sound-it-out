@@ -36,9 +36,12 @@ class DatasetFeatureConfig(BaseModel):
     language_map: Dict[str, str]
 
 
-class CoreDatasetConfig(DatasetFeatureConfig):
+class NamedSplitDatasetFeatureConfig(DatasetFeatureConfig):
     name: str
     split: str
+
+
+class CoreDatasetConfig(NamedSplitDatasetFeatureConfig):
     subset: Optional[str]
     prediction_file: Optional[Path]
 

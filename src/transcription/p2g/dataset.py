@@ -3,14 +3,14 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from datasets import load_dataset, IterableDataset, Dataset, load_from_disk
 from tqdm import tqdm
 from transformers import PreTrainedTokenizer
 
 from common import format_language_marker
-from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig
+from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig, NamedSplitDatasetFeatureConfig
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -45,20 +45,31 @@ def generate_punctuation_regex(separators: str) -> str:
     return result
 
 
-def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dataset, Dataset]:
+def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
+    train_ds_ctx = NamedSplitDatasetFeatureConfig(
+        name=ctx.dataset.output_dataset_name,
+        split="train",
+        input_feature=ctx.dataset.input_feature,
+        output_feature=ctx.dataset.output_feature,
+        language_feature=ctx.dataset.language_feature,
+        language_map=ctx.dataset.language_map,
+    )
     if ctx.evaluation.datasets is None or len(ctx.evaluation.datasets) == 0:
         output_ds = train_ds.train_test_split(seed=ctx.random_seed, train_size=ctx.dataset.train_split_size)
         train_ds = output_ds["train"]
         test_ds = output_ds["test"]
+        test_ds_ctx = train_ds_ctx.model_copy(deep=True)
+        test_ds_ctx.split = "test"
     else:
         if len(ctx.evaluation.datasets) > 1:
             logger.warning("more than one evaluation script found, using the first one for training")
         train_ds = train_ds
         test_ds = load_hf_dataset(ctx.evaluation.datasets[0], ctx.dataset.hf_cache, streaming=False)
-    return train_ds, test_ds
+        test_ds_ctx = ctx.evaluation.datasets[0]
+    return train_ds, train_ds_ctx, test_ds, test_ds_ctx
 
 
-def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, Dataset]:
+def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
     logger.info("creating dataset")
 
     output_path_name = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
@@ -206,9 +217,8 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, Dataset]:
 
 
 def preprocess_dataset(
-        ctx: TrainConfig, ds_ctx: DatasetFeatureConfig,
-        ds: Dataset, tokenizer: PreTrainedTokenizer,
-        cache_file: Path
+        ctx: TrainConfig, ds_ctx: NamedSplitDatasetFeatureConfig,
+        ds: Dataset, tokenizer: PreTrainedTokenizer
 ) -> Dataset:
     def preprocess_function(examples):
         inputs = [
@@ -235,6 +245,8 @@ def preprocess_dataset(
 
         model_inputs["labels"] = labels["input_ids"]
         return model_inputs
+
+    cache_file = ctx.dataset.hf_cache / ds_ctx.name / f"{ds_ctx.split}_tokens.arrow"
 
     return ds.map(
         preprocess_function,
