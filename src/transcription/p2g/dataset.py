@@ -188,15 +188,15 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, Dataset]:
     output_ds.save_to_disk(str(output_path_name))
     with open(output_path_name / 'custom_metadata.json', 'w+') as f:
         json.dump({'seed': ctx.random_seed, 'samples': ctx.dataset.samples}, f)
-    if ctx.evaluation_datasets is None or len(ctx.evaluation_datasets) == 0:
+    if ctx.evaluation.datasets is None or len(ctx.evaluation.datasets) == 0:
         output_ds = output_ds.train_test_split(seed=ctx.random_seed, train_size=ctx.dataset.train_split_size)
         train_ds = output_ds["train"]
         test_ds = output_ds["test"]
     else:
-        if len(ctx.evaluation_datasets) > 1:
+        if len(ctx.evaluation.datasets) > 1:
             logger.warning("more than one evaluation script found, using the first one for training")
         train_ds = output_ds
-        test_ds = load_hf_dataset(ctx.evaluation_datasets[0], ctx.dataset.hf_cache, streaming=False)
+        test_ds = load_hf_dataset(ctx.evaluation.datasets[0], ctx.dataset.hf_cache, streaming=False)
     return train_ds, test_ds
 
 
