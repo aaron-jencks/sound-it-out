@@ -95,6 +95,7 @@ def main():
     print(eval_label_stats)
 
     if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "train": {
                 "inputs": train_input_stats.model_dump(),
