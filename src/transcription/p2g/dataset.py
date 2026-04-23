@@ -45,6 +45,19 @@ def generate_punctuation_regex(separators: str) -> str:
     return result
 
 
+def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dataset, Dataset]:
+    if ctx.evaluation.datasets is None or len(ctx.evaluation.datasets) == 0:
+        output_ds = train_ds.train_test_split(seed=ctx.random_seed, train_size=ctx.dataset.train_split_size)
+        train_ds = output_ds["train"]
+        test_ds = output_ds["test"]
+    else:
+        if len(ctx.evaluation.datasets) > 1:
+            logger.warning("more than one evaluation script found, using the first one for training")
+        train_ds = train_ds
+        test_ds = load_hf_dataset(ctx.evaluation.datasets[0], ctx.dataset.hf_cache, streaming=False)
+    return train_ds, test_ds
+
+
 def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, Dataset]:
     logger.info("creating dataset")
 
@@ -57,7 +70,8 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, Dataset]:
                 metadata = json.load(f)
             if metadata['seed'] == ctx.random_seed and metadata['samples'] == ctx.dataset.samples:
                 logger.info('cached dataset random seed and sample count matches')
-                return load_from_disk(str(output_path_name))
+                output_ds = load_from_disk(str(output_path_name))
+                return split_or_load_eval_dataset(ctx, output_ds)
         logger.info("dataset cache doesn't exist or isn't usable, creating new dataset")
 
     # count how many samples we intend to have
@@ -188,16 +202,7 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, Dataset]:
     output_ds.save_to_disk(str(output_path_name))
     with open(output_path_name / 'custom_metadata.json', 'w+') as f:
         json.dump({'seed': ctx.random_seed, 'samples': ctx.dataset.samples}, f)
-    if ctx.evaluation.datasets is None or len(ctx.evaluation.datasets) == 0:
-        output_ds = output_ds.train_test_split(seed=ctx.random_seed, train_size=ctx.dataset.train_split_size)
-        train_ds = output_ds["train"]
-        test_ds = output_ds["test"]
-    else:
-        if len(ctx.evaluation.datasets) > 1:
-            logger.warning("more than one evaluation script found, using the first one for training")
-        train_ds = output_ds
-        test_ds = load_hf_dataset(ctx.evaluation.datasets[0], ctx.dataset.hf_cache, streaming=False)
-    return train_ds, test_ds
+    return split_or_load_eval_dataset(ctx, output_ds)
 
 
 def preprocess_dataset(
