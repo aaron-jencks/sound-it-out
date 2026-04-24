@@ -1,9 +1,15 @@
 {
   "model": {
+    "tokenizer": {
+      "max_sequence_length": 512
+    },
     "hyperparameters": {
       "num_train_epochs": 5,
       "learning_rate": 5e-4,
       "warmup_steps": 0.2
+    },
+    "generation": {
+      "max_new_tokens": 512
     }
   },
   "dataset": {
