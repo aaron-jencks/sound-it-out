@@ -168,14 +168,7 @@ def generate_trainer(
 
     training_args = Seq2SeqTrainingArguments(
         output_dir=str(ctx.model.checkpoint_prefix),
-        eval_strategy="steps",
-        eval_steps=20,
-        save_strategy="steps",
-        save_steps=40,
-        save_total_limit=2,
-        metric_for_best_model="bleu",
         load_best_model_at_end=True,
-        logging_steps=10,
         predict_with_generate=True,
         report_to="wandb",
         seed=ctx.random_seed,

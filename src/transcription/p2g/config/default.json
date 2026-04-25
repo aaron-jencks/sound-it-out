@@ -14,7 +14,14 @@
       "lr_scheduler_type": "cosine",
       "warmup_steps": 0.1,
       "torch_compile": true,
-      "bfloat16": true
+      "bfloat16": true,
+      "eval_strategy": "steps",
+      "eval_steps": 0.01,
+      "save_strategy": "steps",
+      "save_steps": 0.01,
+      "save_total_limit": 2,
+      "metric_for_best_model": "bleu",
+      "logging_steps": 0.01
     },
     "checkpoint_prefix": "checkpoints",
     "generation": {
