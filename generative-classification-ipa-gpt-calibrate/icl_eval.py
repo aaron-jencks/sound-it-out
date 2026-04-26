@@ -301,6 +301,16 @@ def score_labels_nll(
 
     for word in label_words:
         full_ids: list[int] = tokenizer.encode(context + " " + word)
+        # encode(context) must be a prefix of encode(context + " " + word);
+        # otherwise label token alignment is wrong.
+        if full_ids[:len(context_ids)] != context_ids:
+            raise RuntimeError(
+                "BPE re-merge at context/label boundary. "
+                f"context_ids tail: {context_ids[-3:]}, "
+                f"full_ids head:    {full_ids[:len(context_ids)+1][-4:]}, "
+                f"context end:      {context[-20:]!r}, "
+                f"word:             {word!r}"
+            )
         label_ids = full_ids[len(context_ids):]
         if not label_ids:
             out_pairs.append((float("-inf"), 0))
@@ -328,6 +338,49 @@ def _reduce_scores(pairs: list[tuple[float, int]], mode: str) -> list[float]:
     if mode == "sum":
         return [s if n > 0 else float("-inf") for s, n in pairs]
     raise ValueError(f"unknown reduce mode: {mode}")
+
+
+# ---------------------------------------------------------------------------
+# Contextual calibration
+# ---------------------------------------------------------------------------
+
+CC_DEFAULT_CF_INPUTS = ["N/A", "", "[MASK]"]
+
+
+def compute_cc_priors(
+    model,
+    tokenizer,
+    cfg: dict,
+    label_words: list[str],
+    k_examples: list,
+    k_labs: list[int],
+    device: torch.device,
+    cf_inputs: list[str] = None,
+) -> list[tuple[float, int]]:
+    """Per-label log-prob averaged over content-free inputs.
+
+    Returns the same (sum_log_prob, n_tokens) shape as score_labels_nll
+    so the caller can subtract it in log-space.
+    """
+    if cf_inputs is None:
+        cf_inputs = CC_DEFAULT_CF_INPUTS
+
+    n_labels = len(label_words)
+    sum_logp = [0.0] * n_labels
+    n_tokens = [0] * n_labels
+
+    is_pair = (cfg["task_format"] == "pair")
+
+    for cf in cf_inputs:
+        cf_example = {"text1": cf, "text2": cf} if is_pair else cf
+        cf_context = construct_prompt(cfg, k_examples, k_labs, cf_example)
+        cf_pairs = score_labels_nll(model, tokenizer, cf_context, label_words, device)
+        for i, (s, n) in enumerate(cf_pairs):
+            sum_logp[i] += s
+            n_tokens[i] = n
+
+    n_cf = len(cf_inputs)
+    return [(sum_logp[i] / n_cf, n_tokens[i]) for i in range(n_labels)]
 
 
 # ---------------------------------------------------------------------------
@@ -376,11 +429,13 @@ def run_eval(
     seed: int,
     subsample: int,
     device: torch.device,
+    calibrate: str = "none",
     debug_cm: bool = False,
 ) -> float:
     """Run k-shot ICL eval. Returns the primary-mode argmax accuracy.
 
     primary mode: avg for classification/pair, sum for mcq.
+    calibrate: "none" or "cc" (cc is a no-op for mcq).
     """
     rng = np.random.default_rng(seed)
 
@@ -399,6 +454,22 @@ def run_eval(
         n_choices = 2  # both MCQ tasks are binary
 
     primary_mode = "sum" if is_mcq else "avg"
+
+    # cc has no shared label tokens to estimate priors over for mcq
+    cc_active = (calibrate == "cc") and (not is_mcq)
+
+    if cc_active:
+        # priors are computed once with empty demos (k>0 calibration TBD)
+        cf_pairs = compute_cc_priors(
+            model, tokenizer, cfg, label_words, [], [], device,
+        )
+        cf_sum = np.array([s for s, _ in cf_pairs])
+        cf_n   = np.array([n for _, n in cf_pairs])
+        cf_avg = cf_sum / np.maximum(cf_n, 1)
+        print(f"  CC priors (averaged over {len(CC_DEFAULT_CF_INPUTS)} CF inputs):")
+        for i, w in enumerate(label_words):
+            print(f"    {w!r}: sum={cf_sum[i]:+.3f}  avg={cf_avg[i]:+.3f}  "
+                  f"n_tokens={cf_n[i]}")
 
     n = len(test_examples)
     sum_scores = np.zeros((n, n_choices))
@@ -446,6 +517,27 @@ def run_eval(
             labels_arr, n_choices, cm_names,
         )
 
+    if cc_active:
+        # subtract priors in log-space; cf_avg = cf_sum / n
+        cal_sum_scores = sum_scores - cf_sum
+        cal_avg_scores = avg_scores - cf_avg
+        cal_sum_preds  = np.argmax(cal_sum_scores, axis=1)
+        cal_avg_preds  = np.argmax(cal_avg_scores, axis=1)
+        cal_sum_acc    = float(np.mean(cal_sum_preds == labels_arr))
+        cal_avg_acc    = float(np.mean(cal_avg_preds == labels_arr))
+        cc_flip_avg    = float(np.mean(cal_avg_preds != avg_preds))
+        cc_flip_sum    = float(np.mean(cal_sum_preds != sum_preds))
+        print(f"  cal=cc reduce=sum acc={cal_sum_acc:.4f}   "
+              f"reduce=avg acc={cal_avg_acc:.4f}   "
+              f"cc-vs-raw flips: avg={cc_flip_avg:.2%} sum={cc_flip_sum:.2%}")
+        if debug_cm:
+            _print_confusion_matrix(
+                f"cal=cc / reduce={primary_mode}",
+                cal_sum_preds if primary_mode == "sum" else cal_avg_preds,
+                labels_arr, n_choices, cm_names,
+            )
+        return cal_sum_acc if primary_mode == "sum" else cal_avg_acc
+
     return sum_acc if primary_mode == "sum" else avg_acc
 
 
@@ -466,6 +558,9 @@ def main():
     parser.add_argument("--seed",           type=int, default=42)
     parser.add_argument("--split",          default="test")
     parser.add_argument("--train_split",    default="train")
+    parser.add_argument("--calibrate",      default="none", choices=["none", "cc"],
+                        help="Calibration mode (default: none). cc = contextual calibration "
+                             "(no-op for MCQ).")
     parser.add_argument("--debug-cm",       action="store_true",
                         help="Print confusion matrix per run (debug only).")
     args = parser.parse_args()
@@ -483,7 +578,8 @@ def main():
     print(f"Checkpoint   : {spec.checkpoint_path}")
     print(f"k values     : {args.k}")
     print(f"Test examples: {args.subsample or 'all'}")
-    print(f"Seed         : {args.seed}\n")
+    print(f"Seed         : {args.seed}")
+    print(f"Calibrate    : {args.calibrate}\n")
 
     cfg = load_prompt_config(args.dataset, args.language, args.representation)
     print("Task format  :", cfg["task_format"])
@@ -540,6 +636,7 @@ def main():
             test_examples,  test_labels,
             cfg=cfg, k=k, seed=args.seed,
             subsample=args.subsample, device=device,
+            calibrate=args.calibrate,
             debug_cm=args.debug_cm,
         )
         print(f"{k:>4}  {acc:>10.4f}")

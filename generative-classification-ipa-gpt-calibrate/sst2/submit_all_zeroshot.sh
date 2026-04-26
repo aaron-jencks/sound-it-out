@@ -14,7 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FILTER_REPR="${1:-all}"
 
 # Calibration mode comes from env (default "none" — backward compatible).
-# Set CALIBRATE=cc to opt into Zhao 2021 contextual calibration. Job names
+# Set CALIBRATE=cc to opt into contextual calibration. Job names
 # and logs get a "-cc" suffix so calibrated and raw runs don't collide.
 CALIBRATE="${CALIBRATE:-none}"
 SUFFIX=""
