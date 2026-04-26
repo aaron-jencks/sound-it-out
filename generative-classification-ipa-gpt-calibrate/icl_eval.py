@@ -4,6 +4,7 @@ icl_eval.py — k-shot ICL evaluator for IPA-GPT models.
 
 Usage:
     python icl_eval.py --dataset sst2 --language en --representation text
+    python icl_eval.py --dataset xnli --language en --representation ipa --k 0
 """
 
 from __future__ import annotations
@@ -61,8 +62,35 @@ def load_sst2(split: str = "test", representation: str = "text"):
     return sentences, labels
 
 
+def load_xnli(language: str, representation: str, split: str):
+    """Load XNLI from HF. Returns examples as {'text1': premise, 'text2': hypothesis}."""
+    from datasets import load_dataset
+
+    hf_split = {"train": "train", "validation": "validation",
+                 "test": "test", "dev": "validation"}[split]
+
+    ds = load_dataset(
+        "mugezhang/xnli_eval_multirepr",
+        name=language,
+        split=hf_split,
+        cache_dir=HF_CACHE_DIR,
+    )
+
+    col_map = {
+        "text":      ("premise",            "hypothesis"),
+        "romanized": ("premise_romanized",   "hypothesis_romanized"),
+        "ipa":       ("premise_ipa_stripped","hypothesis_ipa_stripped"),
+    }
+    p_col, h_col = col_map[representation]
+
+    examples = [{"text1": row[p_col].strip(), "text2": row[h_col].strip()} for row in ds]
+    labels   = [int(row["label"]) for row in ds]
+    return examples, labels
+
+
 DATASET_LOADERS = {
     "sst2": lambda lang, rep, split: load_sst2(split, rep),
+    "xnli": load_xnli,
 }
 
 
@@ -80,9 +108,10 @@ def load_prompt_config(dataset: str, language: str, representation: str) -> dict
     ds_cfg = cfg["datasets"][dataset]
 
     task_format = ds_cfg.get("task_format", "classification")
-    if task_format != "classification":
+    if task_format not in ("classification", "pair"):
         raise NotImplementedError(
-            f"Task format '{task_format}' is not yet implemented in icl_eval.py."
+            f"Task format '{task_format}' is not yet implemented in icl_eval.py. "
+            "Supported: 'classification', 'pair'."
         )
 
     langs = ds_cfg.get("languages", {})
@@ -100,6 +129,7 @@ def load_prompt_config(dataset: str, language: str, representation: str) -> dict
     label_dict = {int(k): v if isinstance(v, list) else [v]
                   for k, v in raw_label_dict.items()}
 
+    # rep-level q_prefix/a_prefix override the dataset-level default if set
     q_prefix = rep_cfg.get("q_prefix") or ds_cfg.get("q_prefix")
     a_prefix = rep_cfg.get("a_prefix") or ds_cfg.get("a_prefix")
 
@@ -116,21 +146,41 @@ def load_prompt_config(dataset: str, language: str, representation: str) -> dict
 # Prompt construction
 # ---------------------------------------------------------------------------
 
+def _format_q(cfg: dict, example) -> str:
+    """Format the question portion of the prompt for one example."""
+    if isinstance(example, dict):
+        return cfg["q_prefix"].format(**example)
+    else:
+        return cfg["q_prefix"] + example
+
+
 def construct_prompt(
     cfg: dict,
     train_examples: list,
     train_labels: list[int],
-    test_example: str,
+    test_example,
 ) -> str:
-    """Build a k-shot prompt for a classification task."""
+    """Build a k-shot prompt for classification or pair tasks."""
     a = cfg["a_prefix"]
     assert a[-1] == " ", f"a_prefix must end with a space, got: {repr(a)}"
 
     prompt = cfg["prompt_prefix"]
+    is_pair = isinstance(test_example, dict)
+
     for example, lab in zip(train_examples, train_labels):
         label_str = cfg["label_dict"][lab][0]
-        prompt += cfg["q_prefix"] + example + "\n" + a + label_str + "\n\n"
-    prompt += cfg["q_prefix"] + test_example + "\n" + a[:-1]
+        q_text = _format_q(cfg, example)
+        if is_pair:
+            prompt += q_text + a + label_str + "\n\n"
+        else:
+            prompt += q_text + "\n" + a + label_str + "\n\n"
+
+    q_text = _format_q(cfg, test_example)
+    if is_pair:
+        prompt += q_text + a[:-1]
+    else:
+        prompt += q_text + "\n" + a[:-1]
+
     return prompt
 
 
@@ -224,8 +274,8 @@ def run_eval(
 
 def main():
     parser = argparse.ArgumentParser(description="IPA-GPT ICL baseline evaluator")
-    parser.add_argument("--dataset",        required=True, help="e.g. sst2")
-    parser.add_argument("--language",       required=True, help="e.g. en")
+    parser.add_argument("--dataset",        required=True, help="e.g. sst2, xnli")
+    parser.add_argument("--language",       required=True, help="e.g. en, es, ru")
     parser.add_argument("--representation", required=True,
                         choices=["text", "romanized", "ipa"])
     parser.add_argument("--size",           default="medium",

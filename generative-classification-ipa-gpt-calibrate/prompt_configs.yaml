@@ -43,3 +43,114 @@ datasets:
               pɑzᵻtɪv: "1-tok -> [' pɑzᵻtɪv'] (id 15051)"
               q_prefix_ɹᵻvju: "1-tok -> [' ɹᵻvju']"
               a_prefix_sɛntɪmənt: "1-tok -> [' sɛntɪmənt']"
+
+  # XNLI — 3-way natural language inference
+  xnli:
+    task_format: pair
+    num_tokens_to_predict: 1
+    prompt_prefix: ""
+    q_prefix: "Premise: {text1}\nHypothesis: {text2}\n"
+    a_prefix: "Relationship: "
+
+    languages:
+      en:
+        representations:
+          text:
+            label_dict:
+              0: ["entailment"]
+              1: ["neutral"]
+              2: ["contradiction"]
+            token_status:
+              entailment:    "3-tok -> [' enta', 'il', 'ment']"
+              neutral:       "1-tok -> [' neutral']"
+              contradiction: "2-tok -> [' contrad', 'iction']"
+
+          romanized:
+            label_dict:
+              0: ["entailment"]
+              1: ["neutral"]
+              2: ["contradiction"]
+            token_status:
+              entailment:    "3-tok -> [' enta', 'il', 'ment']"
+              neutral:       "1-tok -> [' neutral']"
+              contradiction: "2-tok -> [' contrad', 'iction']"
+
+          ipa:
+            q_prefix: "pɹɛmɪs: {text1}\nhaɪpɑθəsɪs: {text2}\n"
+            a_prefix: "ɹᵻleɪʃənʃɪp: "
+            label_dict:
+              0: ["ɛnteɪlmənt"]
+              1: ["nutɹəl"]
+              2: ["kɑntɹədɪkʃən"]
+            token_status:
+              ɛnteɪlmənt:    "3-tok -> [' ɛnt', 'eɪl', 'mənt']"
+              nutɹəl:        "1-tok -> [' nutɹəl']"
+              kɑntɹədɪkʃən: "3-tok -> [' kɑnt', 'ɹəd', 'ɪkʃən']"
+
+      es:
+        representations:
+          text:
+            label_dict:
+              0: ["implica"]
+              1: ["neutro"]
+              2: ["contradicción"]
+            token_status:
+              implica:       "1-tok -> [' implica']"
+              neutro:        "2-tok -> [' neut', 'ro']"
+              contradicción: "2-tok -> [' contrad', 'icción']"
+
+          romanized:
+            label_dict:
+              0: ["implica"]
+              1: ["neutro"]
+              2: ["contradiccion"]
+            token_status:
+              implica:        "1-tok -> [' implica']"
+              neutro:         "2-tok -> [' neut', 'ro']"
+              contradiccion:  "2-tok -> [' contrad', 'iccion']"
+
+          ipa:
+            q_prefix: "pɹɛmɪs: {text1}\nhaɪpɑθəsɪs: {text2}\n"
+            a_prefix: "ɹᵻleɪʃənʃɪp: "
+            label_dict:
+              0: ["implika"]
+              1: ["neutɾo"]
+              2: ["kontɾaðikθjon"]
+            token_status:
+              implika:       "1-tok -> [' implika']"
+              neutɾo:        "3-tok -> [' ne', 'ut', 'ɾo']"
+              kontɾaðikθjon: "2-tok -> [' kontɾa', 'ðikθjon']"
+
+      ru:
+        representations:
+          text:
+            label_dict:
+              0: ["следование"]
+              1: ["нейтрально"]
+              2: ["противоречие"]
+            token_status:
+              следование:   "2-tok -> [' след', 'ование']"
+              нейтрально:   "2-tok -> [' нейт', 'рально']"
+              противоречие: "2-tok -> [' противореч', 'ие']"
+
+          romanized:
+            label_dict:
+              0: ["sledovaniye"]
+              1: ["neytral'no"]
+              2: ["protivorechiye"]
+            token_status:
+              sledovaniye:    "3-tok -> [' sled', 'ovan', 'iye']"
+              neytral'no:     "4-tok -> [' ney', 'tral', \"'\", 'no']"
+              protivorechiye: "2-tok -> [' protivorech', 'iye']"
+
+          ipa:
+            q_prefix: "pɹɛmɪs: {text1}\nhaɪpɑθəsɪs: {text2}\n"
+            a_prefix: "ɹᵻleɪʃənʃɪp: "
+            label_dict:
+              0: ["sɭʲidʌvɑnʲijɪ"]
+              1: ["nʲijtrɑɭnʌ"]
+              2: ["prʌtʲivorʲitʃʲijɪ"]
+            token_status:
+              sɭʲidʌvɑnʲijɪ:     "3-tok -> [' sɭʲi', 'dʌ', 'vɑnʲijɪ']"
+              nʲijtrɑɭnʌ:         "2-tok -> [' nʲijt', 'rɑɭnʌ']"
+              prʌtʲivorʲitʃʲijɪ: "3-tok -> [' prʌtʲivo', 'rʲi', 'tʃʲijɪ']"
