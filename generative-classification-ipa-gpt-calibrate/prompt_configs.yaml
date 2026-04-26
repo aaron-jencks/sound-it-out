@@ -221,3 +221,46 @@ datasets:
             token_status:
               no: "1-tok -> [' no']  (id 554)"
               si: "1-tok -> [' si']  (id 701)"
+
+  # XStoryCloze — story-completion MCQ (binary). eval split is named "eval".
+  xstorycloze:
+    task_format: mcq
+    prompt_prefix: ""
+    q_prefix: null
+    a_prefix: null
+
+    languages:
+      en:
+        representations:
+          text:     {}
+          romanized: {}
+          ipa:      {}
+      es:
+        representations:
+          text:     {}
+          romanized: {}
+          ipa:      {}
+      ru:
+        representations:
+          text:     {}
+          romanized: {}
+          ipa:      {}
+      hi:
+        representations:
+          text:     {}
+          romanized: {}
+          ipa:      {}
+
+  # XCopa — causal commonsense MCQ (binary; ta only).
+  xcopa:
+    task_format: mcq
+    prompt_prefix: ""
+    q_prefix: null
+    a_prefix: null
+
+    languages:
+      ta:
+        representations:
+          text:     {}
+          romanized: {}
+          ipa:      {}
