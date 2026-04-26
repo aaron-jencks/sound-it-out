@@ -1,0 +1,45 @@
+# prompt_configs.yaml
+#
+# Per-dataset / language / representation prompt templates and label dicts.
+# Structure: datasets.<name>.languages.<lang>.representations.<repr>.
+
+datasets:
+
+  # SST-2 — binary sentiment (English only)
+  sst2:
+    task_format: classification
+    num_tokens_to_predict: 1
+    prompt_prefix: ""
+    q_prefix: "Review: "
+    a_prefix: "Sentiment: "
+
+    languages:
+      en:
+        representations:
+          text:
+            label_dict:
+              0: ["negative"]
+              1: ["positive"]
+            token_status:
+              negative: "1-tok -> [' negative']"
+              positive: "1-tok -> [' positive']"
+
+          romanized:
+            label_dict:
+              0: ["negative"]
+              1: ["positive"]
+            token_status:
+              negative: "1-tok -> [' negative']"
+              positive: "1-tok -> [' positive']"
+
+          ipa:
+            q_prefix: "ɹᵻvju: "
+            a_prefix: "sɛntɪmənt: "
+            label_dict:
+              0: ["nɛɡətɪv"]
+              1: ["pɑzᵻtɪv"]
+            token_status:
+              nɛɡətɪv: "1-tok -> [' nɛɡətɪv'] (id 27929)"
+              pɑzᵻtɪv: "1-tok -> [' pɑzᵻtɪv'] (id 15051)"
+              q_prefix_ɹᵻvju: "1-tok -> [' ɹᵻvju']"
+              a_prefix_sɛntɪmənt: "1-tok -> [' sɛntɪmənt']"

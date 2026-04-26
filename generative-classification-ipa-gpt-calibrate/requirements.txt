@@ -1,0 +1,13 @@
+# Python dependencies for icl_eval.py.
+# Floor pins; tested against numpy 1.26.4, torch 2.8.0, pyyaml 6.0.3,
+# datasets 4.4.1, transformers 4.57.3.
+
+numpy>=1.20
+torch>=2.0
+pyyaml>=5.0
+datasets>=2.0
+transformers>=4.20
+
+# External (not on PyPI) — see README.md "External dependencies":
+#   ipa_gpt_runtime, ipa_gpt_registry — Python modules at the path
+#   hardcoded in icl_eval.py.
