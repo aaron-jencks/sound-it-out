@@ -88,9 +88,36 @@ def load_xnli(language: str, representation: str, split: str):
     return examples, labels
 
 
+def load_pawsx(language: str, representation: str, split: str):
+    """Load PAWS-X from HF. Returns examples as {'text1': sentence1, 'text2': sentence2}."""
+    from datasets import load_dataset
+
+    hf_split = {"train": "train", "validation": "validation",
+                 "test": "test", "dev": "validation"}[split]
+
+    ds = load_dataset(
+        "mugezhang/pawsx_eval_multirepr",
+        name=language,
+        split=hf_split,
+        cache_dir=HF_CACHE_DIR,
+    )
+
+    col_map = {
+        "text":      ("sentence1",            "sentence2"),
+        "romanized": ("sentence1_romanized",   "sentence2_romanized"),
+        "ipa":       ("sentence1_ipa_stripped","sentence2_ipa_stripped"),
+    }
+    s1_col, s2_col = col_map[representation]
+
+    examples = [{"text1": row[s1_col].strip(), "text2": row[s2_col].strip()} for row in ds]
+    labels   = [int(row["label"]) for row in ds]
+    return examples, labels
+
+
 DATASET_LOADERS = {
-    "sst2": lambda lang, rep, split: load_sst2(split, rep),
-    "xnli": load_xnli,
+    "sst2":  lambda lang, rep, split: load_sst2(split, rep),
+    "xnli":  load_xnli,
+    "pawsx": load_pawsx,
 }
 
 

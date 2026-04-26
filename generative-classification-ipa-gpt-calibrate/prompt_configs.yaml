@@ -154,3 +154,70 @@ datasets:
               sɭʲidʌvɑnʲijɪ:     "3-tok -> [' sɭʲi', 'dʌ', 'vɑnʲijɪ']"
               nʲijtrɑɭnʌ:         "2-tok -> [' nʲijt', 'rɑɭnʌ']"
               prʌtʲivorʲitʃʲijɪ: "3-tok -> [' prʌtʲivo', 'rʲi', 'tʃʲijɪ']"
+
+  # PAWS-X — paraphrase detection (binary)
+  pawsx:
+    task_format: pair
+    num_tokens_to_predict: 1
+    prompt_prefix: ""
+    q_prefix: "Sentence 1: {text1}\nSentence 2: {text2}\n"
+    a_prefix: "Paraphrase: "
+
+    languages:
+      en:
+        representations:
+          text:
+            label_dict:
+              0: ["No"]
+              1: ["Yes"]
+            token_status:
+              No:  "1-tok -> [' No']"
+              Yes: "1-tok -> [' Yes']"
+
+          romanized:
+            label_dict:
+              0: ["No"]
+              1: ["Yes"]
+            token_status:
+              No:  "1-tok -> [' No']"
+              Yes: "1-tok -> [' Yes']"
+
+          ipa:
+            q_prefix: "sɛntəns 1: {text1}\nsɛntəns 2: {text2}\n"
+            a_prefix: "pæɹəfɹeɪz: "
+            label_dict:
+              0: ["noʊ"]
+              1: ["jɛs"]
+            token_status:
+              noʊ:  "1-tok -> [' noʊ']"
+              jɛs:  "1-tok -> [' jɛs']"
+              q_prefix_sɛntəns: "1-tok -> [' sɛntəns']"
+              a_prefix_pæɹəfɹeɪz: "3-tok -> [' pæɹə', 'fɹeɪ', 'z']"
+
+      es:
+        representations:
+          text:
+            label_dict:
+              0: ["No"]
+              1: ["Sí"]
+            token_status:
+              No: "1-tok -> [' No']  (id 2783)"
+              Sí: "1-tok -> [' Sí']  (id 27878)"
+
+          romanized:
+            label_dict:
+              0: ["No"]
+              1: ["Si"]
+            token_status:
+              No: "1-tok -> [' No']  (id 1329)"
+              Si: "1-tok -> [' Si']  (id 3300)"
+
+          ipa:
+            q_prefix: "sɛntəns 1: {text1}\nsɛntəns 2: {text2}\n"
+            a_prefix: "pæɹəfɹeɪz: "
+            label_dict:
+              0: ["no"]
+              1: ["si"]
+            token_status:
+              no: "1-tok -> [' no']  (id 554)"
+              si: "1-tok -> [' si']  (id 701)"
