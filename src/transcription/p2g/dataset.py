@@ -64,17 +64,38 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
         language_map=ctx.dataset.language_map,
     )
     if ctx.evaluation.datasets is None or len(ctx.evaluation.datasets) == 0:
-        languages = sorted(set(train_ds[ctx.dataset.language_feature]))
+        language_col = ctx.dataset.language_feature
+
+        languages = sorted(set(train_ds[language_col]))
+
         train_ds = train_ds.cast_column(
-            ctx.dataset.language_feature,
-            ClassLabel(names=languages)
+            language_col,
+            ClassLabel(names=languages),
         )
+
         split_size = determine_eval_size(ctx, train_ds)
         logger.info(f"using test size of {split_size}")
+
         output_ds = train_ds.train_test_split(
-            seed=ctx.random_seed, test_size=split_size,
-            stratify_by_column=ctx.dataset.language_feature
-        ).cast_column(ctx.dataset.language_feature, Value("string"))
+            seed=ctx.random_seed,
+            test_size=split_size,
+            stratify_by_column=language_col,
+        )
+
+        label_feature = train_ds.features[language_col]
+        new_features = output_ds["train"].features.copy()
+        new_features[language_col] = Value("string")
+
+        def decode_language(examples):
+            examples[language_col] = label_feature.int2str(examples[language_col])
+            return examples
+
+        output_ds = output_ds.map(decode_language, batched=True, num_proc=ctx.cpus, features=new_features)
+
+        logger.info(output_ds["train"][0][language_col])
+        logger.info(output_ds["test"][0][language_col])  # or "test", depending on split name
+        logger.info(output_ds["train"].features[language_col])
+
         train_ds = output_ds["train"]
         test_ds = output_ds["test"]
         test_ds_ctx = train_ds_ctx.model_copy(deep=True)

@@ -8,6 +8,11 @@
     }
   },
   "dataset": {
+    "samples": 100000,
+    "splits": {
+      "eval_ratio": 0.2,
+      "max_eval_size": 10000
+    },
     "definitions": [
       {
         "name": "mugezhang/8lang_multirepr_pretrain_interleaved",
