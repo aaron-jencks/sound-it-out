@@ -10,6 +10,7 @@ import numpy as np
 import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, DataCollatorForSeq2Seq, \
     Seq2SeqTrainer, Seq2SeqTrainingArguments, set_seed, Trainer
+from transformers.utils import is_flash_attn_2_available
 import wandb
 
 from common import load_tokenizer, format_language_marker
@@ -94,10 +95,18 @@ def generate_trainer(
         if eval_ds_def.language_feature is None:
             raise ValueError("evaluation dataset language feature cannot be None")
 
-    model = AutoModelForSeq2SeqLM.from_pretrained(
-        ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
-        device_map="auto"
-    )
+    if not is_flash_attn_2_available():
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
+            device_map="auto"
+        )
+    else:
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
+            device_map="auto",
+            torch_dtype=torch.bfloat16 if ctx.model.supports_bf16 else torch.float16,
+            attn_implementation="flash_attention_2"
+        )
 
     if model_checkpoint is None:
         for k, v in ctx.model.generation.items():

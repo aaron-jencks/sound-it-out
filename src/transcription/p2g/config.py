@@ -22,6 +22,7 @@ class ModelConfig(BaseModel):
     hyperparameters: Dict
     checkpoint_prefix: Path
     generation: Dict
+    supports_bf16: bool
 
 
 class LanguageConfig(BaseModel):
