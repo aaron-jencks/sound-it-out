@@ -1,0 +1,32 @@
+{
+  "model": {
+    "tokenizer": {
+      "max_sequence_length": 256
+    },
+    "generation": {
+      "max_new_tokens": 256
+    }
+  },
+  "dataset": {
+    "definitions": [
+      {
+        "name": "mugezhang/8lang_multirepr_pretrain_interleaved",
+        "split": "train",
+        "subset": null,
+        "input_feature": "ipa_stripped",
+        "output_feature": "text",
+        "language_feature": "language",
+        "language_splits": [
+          "eng"
+        ],
+        "prediction_file": null,
+        "language_map": {
+          "eng": "en"
+        }
+      }
+    ],
+    "language_separators": {
+      "eng": ".?!…\\n"
+    }
+  }
+}
