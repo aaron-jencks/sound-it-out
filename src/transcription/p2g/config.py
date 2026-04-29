@@ -50,6 +50,11 @@ class ConstructedDatasetDefinitionConfig(CoreDatasetConfig):
     language_splits: List[str]
 
 
+class SplitRatioConfig(BaseModel):
+    eval_ratio: float
+    max_eval_size: int
+
+
 class ConstructedDatasetConfig(DatasetFeatureConfig):
     definitions: List[ConstructedDatasetDefinitionConfig]
     samples: int
@@ -59,6 +64,7 @@ class ConstructedDatasetConfig(DatasetFeatureConfig):
     output_dataset_name: str
     force_dataset_build: bool
     language_separators: Dict[str, str]
+    splits: SplitRatioConfig
 
 
 class WandbConfig(BaseModel):

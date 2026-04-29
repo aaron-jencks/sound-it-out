@@ -30,7 +30,10 @@
     "input_feature": "ipa",
     "output_feature": "text",
     "language_feature": "language",
-    "train_split_size": 0.8,
+    "splits": {
+      "eval_ratio": 0.2,
+      "max_eval_size": 160000
+    },
     "output_dataset_name": "constructed_ipa_dataset",
     "force_dataset_build": false,
     "language_separators": {},

@@ -45,6 +45,13 @@ def generate_punctuation_regex(separators: str) -> str:
     return result
 
 
+def determine_eval_size(ctx: TrainConfig, ds: Dataset) -> Union[int, float]:
+    dslen = len(ds)
+    if dslen * ctx.dataset.splits.eval_ratio > ctx.dataset.splits.max_eval_size:
+        return ctx.dataset.splits.max_eval_size
+    return ctx.dataset.splits.eval_ratio
+
+
 def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
     train_ds_ctx = NamedSplitDatasetFeatureConfig(
         name=ctx.dataset.output_dataset_name,
@@ -55,7 +62,11 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
         language_map=ctx.dataset.language_map,
     )
     if ctx.evaluation.datasets is None or len(ctx.evaluation.datasets) == 0:
-        output_ds = train_ds.train_test_split(seed=ctx.random_seed, train_size=ctx.dataset.train_split_size)
+        split_size = determine_eval_size(ctx, train_ds)
+        output_ds = train_ds.train_test_split(
+            seed=ctx.random_seed, test_size=split_size,
+            stratify_by_column=ctx.dataset.language_feature
+        )
         train_ds = output_ds["train"]
         test_ds = output_ds["test"]
         test_ds_ctx = train_ds_ctx.model_copy(deep=True)
