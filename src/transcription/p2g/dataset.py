@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 from typing import Dict, List, Optional, Tuple, Union
 
-from datasets import load_dataset, IterableDataset, Dataset, load_from_disk, ClassLabel
+from datasets import load_dataset, IterableDataset, Dataset, load_from_disk, ClassLabel, Value
 from pydantic import ValidationError
 from tqdm import tqdm
 from transformers import PreTrainedTokenizer
@@ -74,7 +74,7 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
         output_ds = train_ds.train_test_split(
             seed=ctx.random_seed, test_size=split_size,
             stratify_by_column=ctx.dataset.language_feature
-        )
+        ).cast_column(ctx.dataset.language_feature, Value("string"))
         train_ds = output_ds["train"]
         test_ds = output_ds["test"]
         test_ds_ctx = train_ds_ctx.model_copy(deep=True)
