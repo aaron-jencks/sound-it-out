@@ -3,14 +3,16 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from datasets import load_dataset, IterableDataset, Dataset, load_from_disk
+from pydantic import ValidationError
 from tqdm import tqdm
 from transformers import PreTrainedTokenizer
 
 from common import format_language_marker
-from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig, NamedSplitDatasetFeatureConfig
+from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig, NamedSplitDatasetFeatureConfig, \
+    ConstructedDatasetConfig
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -80,18 +82,33 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
     return train_ds, train_ds_ctx, test_ds, test_ds_ctx
 
 
+def store_metadata(output_dir: Path, metadata: ConstructedDatasetConfig):
+    with open(output_dir / 'custom_metadata.json', 'w+') as f:
+        s = metadata.model_dump_json()
+        f.write(s)
+
+
+def load_metadata(output_dir: Path) -> Optional[ConstructedDatasetConfig]:
+    if not output_dir.exists():
+        return None
+    try:
+        with open(output_dir / 'custom_metadata.json', 'r') as f:
+            metadata = json.load(f)
+        return ConstructedDatasetConfig.model_validate_json(metadata)
+    except (FileNotFoundError, json.JSONDecodeError, ValidationError) as _:
+        return None
+
+
 def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
     logger.info("creating dataset")
 
     output_path_name = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
     if not ctx.dataset.force_dataset_build:
         logger.info('checking for cached dataset')
-        if output_path_name.exists():
-            logger.info('cached dataset exists')
-            with open(output_path_name / 'custom_metadata.json', 'r') as f:
-                metadata = json.load(f)
-            if metadata['seed'] == ctx.random_seed and metadata['samples'] == ctx.dataset.samples:
-                logger.info('cached dataset random seed and sample count matches')
+        meta = load_metadata(output_path_name)
+        if meta is not None:
+            if meta == ctx.dataset:
+                logger.info('cached dataset metadata matches')
                 output_ds = load_from_disk(str(output_path_name))
                 return split_or_load_eval_dataset(ctx, output_ds)
         logger.info("dataset cache doesn't exist or isn't usable, creating new dataset")
@@ -222,8 +239,7 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureC
     # Create an in-memory dataset
     output_ds = Dataset.from_dict(final_dataset)
     output_ds.save_to_disk(str(output_path_name))
-    with open(output_path_name / 'custom_metadata.json', 'w+') as f:
-        json.dump({'seed': ctx.random_seed, 'samples': ctx.dataset.samples}, f)
+    store_metadata(output_path_name, ctx.dataset)
     return split_or_load_eval_dataset(ctx, output_ds)
 
 

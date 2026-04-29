@@ -60,7 +60,6 @@ class ConstructedDatasetConfig(DatasetFeatureConfig):
     samples: int
     shuffle_buffer: int
     hf_cache: Path
-    train_split_size: float
     output_dataset_name: str
     force_dataset_build: bool
     language_separators: Dict[str, str]
