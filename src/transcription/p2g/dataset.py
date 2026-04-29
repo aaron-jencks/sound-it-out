@@ -65,6 +65,7 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
     )
     if ctx.evaluation.datasets is None or len(ctx.evaluation.datasets) == 0:
         split_size = determine_eval_size(ctx, train_ds)
+        logger.info(f"using test size of {split_size}")
         output_ds = train_ds.train_test_split(
             seed=ctx.random_seed, test_size=split_size,
             stratify_by_column=ctx.dataset.language_feature
