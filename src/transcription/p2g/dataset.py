@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 from typing import Dict, List, Optional, Tuple, Union
 
-from datasets import load_dataset, IterableDataset, Dataset, load_from_disk
+from datasets import load_dataset, IterableDataset, Dataset, load_from_disk, ClassLabel
 from pydantic import ValidationError
 from tqdm import tqdm
 from transformers import PreTrainedTokenizer
@@ -64,6 +64,11 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
         language_map=ctx.dataset.language_map,
     )
     if ctx.evaluation.datasets is None or len(ctx.evaluation.datasets) == 0:
+        languages = sorted(set(train_ds[ctx.dataset.language_feature]))
+        train_ds = train_ds.cast_column(
+            ctx.dataset.language_feature,
+            ClassLabel(names=languages)
+        )
         split_size = determine_eval_size(ctx, train_ds)
         logger.info(f"using test size of {split_size}")
         output_ds = train_ds.train_test_split(
