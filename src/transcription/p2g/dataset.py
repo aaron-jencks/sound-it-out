@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 import re
 from typing import Dict, List, Optional, Tuple, Union
+import uuid
 
 from datasets import load_dataset, IterableDataset, Dataset, load_from_disk, ClassLabel, Value
 from pydantic import ValidationError
@@ -67,9 +68,15 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
         language_col = ctx.dataset.language_feature
 
         languages = sorted(set(train_ds[language_col]))
+        temp_language_feature = str(uuid.uuid4())
+
+        train_ds = train_ds.add_column(
+            temp_language_feature,
+            train_ds[language_col],
+        )
 
         train_ds = train_ds.cast_column(
-            language_col,
+            temp_language_feature,
             ClassLabel(names=languages),
         )
 
@@ -82,22 +89,8 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
             stratify_by_column=language_col,
         )
 
-        label_feature = train_ds.features[language_col]
-        new_features = output_ds["train"].features.copy()
-        new_features[language_col] = Value("string")
-
-        def decode_language(examples):
-            examples[language_col] = label_feature.int2str(examples[language_col])
-            return examples
-
-        output_ds = output_ds.map(decode_language, batched=True, num_proc=ctx.cpus, features=new_features)
-
-        logger.info(output_ds["train"][0][language_col])
-        logger.info(output_ds["test"][0][language_col])  # or "test", depending on split name
-        logger.info(output_ds["train"].features[language_col])
-
-        train_ds = output_ds["train"]
-        test_ds = output_ds["test"]
+        train_ds = output_ds["train"].remove_column(temp_language_feature)
+        test_ds = output_ds["test"].remove_column(temp_language_feature)
         test_ds_ctx = train_ds_ctx.model_copy(deep=True)
         test_ds_ctx.split = "test"
     else:
