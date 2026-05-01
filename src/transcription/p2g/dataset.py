@@ -86,7 +86,7 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
         output_ds = train_ds.train_test_split(
             seed=ctx.random_seed,
             test_size=split_size,
-            stratify_by_column=language_col,
+            stratify_by_column=temp_language_feature,
         )
 
         train_ds = output_ds["train"].remove_column(temp_language_feature)
