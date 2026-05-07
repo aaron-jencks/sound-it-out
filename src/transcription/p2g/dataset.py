@@ -16,7 +16,7 @@ from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig, NamedSp
     ConstructedDatasetConfig
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__file__)
 
 
 def load_hf_dataset(definition: CoreDatasetConfig, cache_loc: Path, streaming: bool = True) -> Union[IterableDataset, Dataset]:
