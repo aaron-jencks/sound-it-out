@@ -121,8 +121,16 @@ def generate_trainer(
     else:
         try:
             model = try_loading_model_with_attn_implementation(ctx, model_checkpoint, "flash_attention_2")
-        except ValueError as e:
-            model = try_loading_model_with_attn_implementation(ctx, model_checkpoint, "sdpa")
+        except ValueError:
+            logger.warning("failed to use flash attention, trying scaled dot product")
+            try:
+                model = try_loading_model_with_attn_implementation(ctx, model_checkpoint, "sdpa")
+            except ValueError:
+                logger.warning("failed to use sdpa attention, using normal attention")
+                model = AutoModelForSeq2SeqLM.from_pretrained(
+                    ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
+                    device_map="auto"
+                )
 
     if model_checkpoint is None:
         for k, v in ctx.model.generation.items():
