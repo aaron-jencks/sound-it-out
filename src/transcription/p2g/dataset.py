@@ -109,12 +109,14 @@ def store_metadata(output_dir: Path, metadata: ConstructedDatasetConfig):
 
 def load_metadata(output_dir: Path) -> Optional[ConstructedDatasetConfig]:
     if not output_dir.exists():
+        logger.debug(f"cache directory: {output_dir} did not exist!")
         return None
     try:
         with open(output_dir / 'custom_metadata.json', 'r') as f:
             metadata = json.load(f)
-        return ConstructedDatasetConfig.model_validate_json(metadata)
-    except (FileNotFoundError, json.JSONDecodeError, ValidationError) as _:
+        return ConstructedDatasetConfig.model_validate(metadata)
+    except (FileNotFoundError, json.JSONDecodeError, ValidationError) as e:
+        logger.debug(f"failed to read metadata from {output_dir}/custom_metadata.json: {e}")
         return None
 
 
