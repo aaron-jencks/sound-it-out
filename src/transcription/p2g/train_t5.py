@@ -110,12 +110,20 @@ def generate_trainer(
             device_map="auto"
         )
     else:
-        model = AutoModelForSeq2SeqLM.from_pretrained(
-            ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
-            device_map="auto",
-            torch_dtype=torch.bfloat16 if ctx.model.supports_bf16 else torch.float16,
-            attn_implementation="flash_attention_2"
-        )
+        try:
+            model = AutoModelForSeq2SeqLM.from_pretrained(
+                ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
+                device_map="auto",
+                torch_dtype=torch.bfloat16 if ctx.model.supports_bf16 else torch.float16,
+                attn_implementation="flash_attention_2"
+            )
+        except ValueError as e:
+            if "does not support Flash Attention 2 yet" in str(e):
+                logger.warning("the model does NOT support flash attention 2!")
+                model = AutoModelForSeq2SeqLM.from_pretrained(
+                    ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
+                    device_map="auto"
+                )
 
     if model_checkpoint is None:
         for k, v in ctx.model.generation.items():
