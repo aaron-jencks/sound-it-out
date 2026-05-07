@@ -126,7 +126,9 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureC
     if not ctx.dataset.force_dataset_build:
         logger.info('checking for cached dataset')
         meta = load_metadata(output_path_name)
+        logger.debug(f"found metadata: {meta}")
         if meta is not None:
+            logger.debug(f"existing metadata: {ctx.dataset}")
             if meta == ctx.dataset:
                 logger.info('cached dataset metadata matches')
                 output_ds = load_from_disk(str(output_path_name))
