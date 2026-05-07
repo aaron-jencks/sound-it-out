@@ -80,6 +80,15 @@ def setup_tokenizer(ctx: TrainConfig, model: Optional[AutoModelForSeq2SeqLM],
     return tokenizer
 
 
+def try_loading_model_with_attn_implementation(ctx: TrainConfig, model_checkpoint: Optional[Path], imp: str) -> AutoModelForSeq2SeqLM:
+    return AutoModelForSeq2SeqLM.from_pretrained(
+        ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
+        device_map="auto",
+        torch_dtype=torch.bfloat16 if ctx.model.supports_bf16 else torch.float16,
+        attn_implementation=imp
+    )
+
+
 def generate_trainer(
         ctx: TrainConfig,
         train_ds: Optional[Dataset], eval_ds: Optional[Dataset],
@@ -111,21 +120,9 @@ def generate_trainer(
         )
     else:
         try:
-            model = AutoModelForSeq2SeqLM.from_pretrained(
-                ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
-                device_map="auto",
-                torch_dtype=torch.bfloat16 if ctx.model.supports_bf16 else torch.float16,
-                attn_implementation="flash_attention_2"
-            )
+            model = try_loading_model_with_attn_implementation(ctx, model_checkpoint, "flash_attention_2")
         except ValueError as e:
-            if "does not support Flash Attention 2 yet" in str(e):
-                logger.warning("the model does NOT support flash attention 2!")
-                model = AutoModelForSeq2SeqLM.from_pretrained(
-                    ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
-                    device_map="auto"
-                )
-            else:
-                raise e
+            model = try_loading_model_with_attn_implementation(ctx, model_checkpoint, "sdpa")
 
     if model_checkpoint is None:
         for k, v in ctx.model.generation.items():
