@@ -124,6 +124,8 @@ def generate_trainer(
                     ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
                     device_map="auto"
                 )
+            else:
+                raise e
 
     if model_checkpoint is None:
         for k, v in ctx.model.generation.items():
