@@ -15,7 +15,6 @@ from common import format_language_marker
 from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig, NamedSplitDatasetFeatureConfig, \
     ConstructedDatasetConfig
 
-logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__file__)
 
 

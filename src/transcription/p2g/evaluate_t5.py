@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from config import generate_argparse, load_configs, TrainConfig, CoreDatasetConfig, DatasetFeatureConfig
 from dataset import create_dataset, load_hf_dataset
-from train_t5 import generate_trainer
+from train_t5 import generate_trainer, setup_logging
 
 
 def tokenize_dataset(ds_def: DatasetFeatureConfig, ds, tokenizer):
@@ -69,6 +69,8 @@ def main():
     ag.add_argument('--checkpoint', type=str, required=True, help='The checkpoint to be evaluated.')
     args = ap.parse_args()
     conf = load_configs(args.configs, args.default_config)
+
+    setup_logging()
 
     if conf.cpus < 0:
         conf.cpus = os.cpu_count()

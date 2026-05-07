@@ -10,7 +10,7 @@ import uuid
 from pydantic import BaseModel
 
 from config import generate_argparse, load_configs, TrainConfig
-from train_t5 import train
+from train_t5 import train, setup_logging
 
 
 logging.basicConfig(level=logging.INFO)
@@ -174,6 +174,7 @@ def main():
     ag.add_argument('-p', '--parameters', type=Path, nargs='*', help='the parameter configs to use')
     ag.add_argument('--default-parameters', type=Path, default=Path('config/parameters/default.json'), help='the default parameters to use')
     args = ap.parse_args()
+    setup_logging()
     base_ctx = load_configs(args.configs, default_config=args.default_config)
     search_ctx = load_configs(args.parameters, default_config=args.default_parameters, schema=GridConfig)
     loop_grid_search(base_ctx, search_ctx)
