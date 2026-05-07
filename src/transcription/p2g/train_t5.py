@@ -18,7 +18,6 @@ from config import load_configs, TrainConfig, generate_argparse, DatasetFeatureC
 from dataset import create_dataset, preprocess_dataset
 
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logging.getLogger("transformers.generation.utils").setLevel(logging.ERROR)  # Stop terminal vomit
 
@@ -26,6 +25,7 @@ logging.getLogger("transformers.generation.utils").setLevel(logging.ERROR)  # St
 def parse_args() -> TrainConfig:
     ap = generate_argparse('trains a p2g model')
     args = ap.parse_args()
+    logging.basicConfig(level=logging.INFO)
     config = load_configs(args.configs, args.default_config)
     if config.cpus < 0:
         config.cpus = os.cpu_count()

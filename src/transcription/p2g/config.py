@@ -102,4 +102,5 @@ def generate_argparse(description: str = '') -> ArgumentParser:
     ag = parser.add_argument_group('cascading config files')
     ag.add_argument('configs', type=Path, nargs='*', help='cascading config files to use')
     ag.add_argument('--default-config', type=Path, default=Path('config/default.json'), help='default config file')
+    parser.add_argument('--debug', action='store_true', help='enable debug print statements')
     return parser
