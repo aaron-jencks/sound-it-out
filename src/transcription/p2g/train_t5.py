@@ -24,7 +24,11 @@ logger = logging.getLogger(__file__)
 def setup_logging(debug: bool = False):
     logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
     logging.getLogger("transformers.generation.utils").setLevel(logging.ERROR)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("http").setLevel(logging.WARNING)
+    logging.getLogger("fsspec").setLevel(logging.WARNING)
+    logging.getLogger("filelock").setLevel(logging.WARNING)
 
 
 def parse_args() -> TrainConfig:
