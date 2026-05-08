@@ -133,7 +133,6 @@ def generate_trainer(
             except ValueError:
                 logger.warning("failed to use sdpa attention, using normal attention")
                 model = setup_model(ctx, model_checkpoint)
-    model = torch.compile(model)
 
     if model_checkpoint is None:
         for k, v in ctx.model.generation.items():
