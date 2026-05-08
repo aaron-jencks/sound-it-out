@@ -29,6 +29,8 @@ def setup_logging(debug: bool = False):
     logging.getLogger("http").setLevel(logging.WARNING)
     logging.getLogger("fsspec").setLevel(logging.WARNING)
     logging.getLogger("filelock").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("git").setLevel(logging.WARNING)
 
 
 def parse_args() -> TrainConfig:
