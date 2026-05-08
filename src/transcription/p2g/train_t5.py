@@ -80,12 +80,18 @@ def setup_tokenizer(ctx: TrainConfig, model: Optional[AutoModelForSeq2SeqLM],
     return tokenizer
 
 
-def try_loading_model_with_attn_implementation(ctx: TrainConfig, model_checkpoint: Optional[Path], imp: str) -> AutoModelForSeq2SeqLM:
+def setup_model(ctx: TrainConfig, model_checkpoint: Optional[Path], attn: Optional[str] = None) -> AutoModelForSeq2SeqLM:
+    if attn is None:
+        return AutoModelForSeq2SeqLM.from_pretrained(
+            ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
+            device_map="auto",
+            torch_dtype=torch.bfloat16 if ctx.model.supports_bf16 else torch.float16,
+        )
     return AutoModelForSeq2SeqLM.from_pretrained(
         ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
         device_map="auto",
         torch_dtype=torch.bfloat16 if ctx.model.supports_bf16 else torch.float16,
-        attn_implementation=imp
+        attn_implementation=attn
     )
 
 
@@ -114,23 +120,17 @@ def generate_trainer(
             raise ValueError("evaluation dataset language feature cannot be None")
 
     if not is_flash_attn_2_available():
-        model = AutoModelForSeq2SeqLM.from_pretrained(
-            ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
-            device_map="auto"
-        )
+        model = setup_model(ctx, model_checkpoint)
     else:
         try:
-            model = try_loading_model_with_attn_implementation(ctx, model_checkpoint, "flash_attention_2")
+            model = setup_model(ctx, model_checkpoint, "flash_attention_2")
         except ValueError:
             logger.warning("failed to use flash attention, trying scaled dot product")
             try:
-                model = try_loading_model_with_attn_implementation(ctx, model_checkpoint, "sdpa")
+                model = setup_model(ctx, model_checkpoint, "sdpa")
             except ValueError:
                 logger.warning("failed to use sdpa attention, using normal attention")
-                model = AutoModelForSeq2SeqLM.from_pretrained(
-                    ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
-                    device_map="auto"
-                )
+                model = model = setup_model(ctx, model_checkpoint)
 
     if model_checkpoint is None:
         for k, v in ctx.model.generation.items():
