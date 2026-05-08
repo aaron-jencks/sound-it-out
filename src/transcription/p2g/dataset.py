@@ -3,6 +3,7 @@ import json
 import logging
 from pathlib import Path
 import re
+import shutil
 from typing import Dict, List, Optional, Tuple, Union
 import uuid
 
@@ -135,7 +136,8 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureC
                 output_ds = load_from_disk(str(output_path_name))
                 return split_or_load_eval_dataset(ctx, output_ds)
         logger.info("dataset cache doesn't exist or isn't usable, creating new dataset")
-        output_path_name.unlink(missing_ok=True)
+        if output_path_name.exists():
+            shutil.rmtree(output_path_name)
 
     # count how many samples we intend to have
     total_samples = 0
