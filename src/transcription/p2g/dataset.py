@@ -55,7 +55,7 @@ def determine_eval_size(ctx: TrainConfig, ds: Dataset) -> Union[int, float]:
     return ctx.dataset.splits.eval_ratio
 
 
-def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
+def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset, force: bool = False) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
     train_ds_ctx = NamedSplitDatasetFeatureConfig(
         name=ctx.dataset.output_dataset_name,
         split="train",
@@ -67,34 +67,51 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
     if ctx.evaluation.datasets is None or len(ctx.evaluation.datasets) == 0:
         language_col = ctx.dataset.language_feature
         logger.info("generating train test splits")
-        logger.info("generating numeric language column")
+        split_output_path_name = ctx.dataset.hf_cache / f"{ctx.dataset.output_dataset_name}_split"
+        if not force and split_output_path_name.exists():
+            logger.info("split dataset exists, loading from cache")
+            output_ds = load_from_disk(str(split_output_path_name))
+            train_ds = output_ds["train"]
+            test_ds = output_ds["test"]
+        else:
+            logger.info("generating numeric language column")
 
-        languages = sorted(set(train_ds[language_col]))
-        temp_language_feature = str(uuid.uuid4())
+            if split_output_path_name.exists():
+                logger.info("removing stale cache entry")
+                shutil.rmtree(split_output_path_name)
 
-        train_ds = train_ds.add_column(
-            temp_language_feature,
-            train_ds[language_col],
-        )
+            languages = sorted(set(train_ds[language_col]))
+            temp_language_feature = str(uuid.uuid4())
 
-        train_ds = train_ds.cast_column(
-            temp_language_feature,
-            ClassLabel(names=languages),
-        )
+            train_ds = train_ds.add_column(
+                temp_language_feature,
+                train_ds[language_col],
+            )
 
-        logger.info("generating train test splits")
-        split_size = determine_eval_size(ctx, train_ds)
-        logger.info(f"using test size of {split_size}")
+            train_ds = train_ds.cast_column(
+                temp_language_feature,
+                ClassLabel(names=languages),
+            )
 
-        output_ds = train_ds.train_test_split(
-            seed=ctx.random_seed,
-            test_size=split_size,
-            stratify_by_column=temp_language_feature,
-        )
+            logger.info("generating train test splits")
+            split_size = determine_eval_size(ctx, train_ds)
+            logger.info(f"using test size of {split_size}")
 
-        logger.info("removing old columns")
-        train_ds = output_ds["train"].remove_columns(temp_language_feature)
-        test_ds = output_ds["test"].remove_columns(temp_language_feature)
+            output_ds = train_ds.train_test_split(
+                seed=ctx.random_seed,
+                test_size=split_size,
+                stratify_by_column=temp_language_feature,
+            )
+
+            logger.info("removing old columns")
+            output_ds["train"] = output_ds["train"].remove_columns(temp_language_feature)
+            output_ds["test"] = output_ds["test"].remove_columns(temp_language_feature)
+
+            logger.info("saving dataset to disk")
+            output_ds.save_to_disk(split_output_path_name)
+
+            train_ds = output_ds["train"]
+            test_ds = output_ds["test"]
 
         logger.info("generating eval context")
         test_ds_ctx = train_ds_ctx.model_copy(deep=True)
@@ -272,7 +289,7 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureC
     output_ds = Dataset.from_dict(final_dataset)
     output_ds.save_to_disk(str(output_path_name))
     store_metadata(output_path_name, ctx.dataset)
-    return split_or_load_eval_dataset(ctx, output_ds)
+    return split_or_load_eval_dataset(ctx, output_ds, force=True)
 
 
 def preprocess_dataset(
