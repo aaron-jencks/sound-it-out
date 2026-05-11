@@ -66,6 +66,8 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
     )
     if ctx.evaluation.datasets is None or len(ctx.evaluation.datasets) == 0:
         language_col = ctx.dataset.language_feature
+        logger.info("generating train test splits")
+        logger.info("generating numeric language column")
 
         languages = sorted(set(train_ds[language_col]))
         temp_language_feature = str(uuid.uuid4())
@@ -80,6 +82,7 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
             ClassLabel(names=languages),
         )
 
+        logger.info("generating train test splits")
         split_size = determine_eval_size(ctx, train_ds)
         logger.info(f"using test size of {split_size}")
 
@@ -89,8 +92,11 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset) -> Tuple[Dat
             stratify_by_column=temp_language_feature,
         )
 
+        logger.info("removing old columns")
         train_ds = output_ds["train"].remove_columns(temp_language_feature)
         test_ds = output_ds["test"].remove_columns(temp_language_feature)
+
+        logger.info("generating eval context")
         test_ds_ctx = train_ds_ctx.model_copy(deep=True)
         test_ds_ctx.split = "test"
     else:
