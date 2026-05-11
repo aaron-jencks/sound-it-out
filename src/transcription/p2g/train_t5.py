@@ -50,11 +50,11 @@ def generate_trainer(
         model = setup_model(ctx, model_checkpoint)
     else:
         try:
-            model = setup_model(ctx, model_checkpoint, "flash_attention_2")
+            model = setup_model(ctx, model_checkpoint, "flash")
         except ValueError:
             logger.warning("failed to use flash attention, trying scaled dot product")
             try:
-                model = setup_model(ctx, model_checkpoint, "sdpa")
+                model = setup_model(ctx, model_checkpoint, "triton-basic")
             except ValueError:
                 logger.warning("failed to use sdpa attention, using normal attention")
                 model = setup_model(ctx, model_checkpoint)
@@ -120,7 +120,7 @@ def generate_trainer(
         args=training_args,
         train_dataset=train_ds,
         eval_dataset=eval_ds,
-        processing_class=tokenizer,
+        tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
     ), tokenizer
