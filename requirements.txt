@@ -58,3 +58,4 @@ psutil
 wheel
 ninja
 flash-attn
+turbot5
