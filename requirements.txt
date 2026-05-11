@@ -44,10 +44,10 @@ sentence-transformers>=5.0
 tensorflow-datasets>=4.9
 tensorflow-metadata>=1.17
 tiktoken>=0.5
-tokenizers>=0.22
-torch
+tokenizers==0.19.1
+torch==2.11.0
 tqdm>=4.67
-transformers[torch]>=4.57
+transformers[torch]==4.41.2
 typing-extensions
 vega-datasets>=0.9
 wandb>=0.22
@@ -58,4 +58,4 @@ psutil
 wheel
 ninja
 flash-attn
-turbot5
+turbot5==0.0.2
