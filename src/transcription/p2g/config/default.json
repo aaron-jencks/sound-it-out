@@ -12,7 +12,7 @@
       "per_device_eval_batch_size": 128,
       "learning_rate": 5e-5,
       "lr_scheduler_type": "cosine",
-      "warmup_steps": 0.1,
+      "warmup_ratio": 0.1,
       "torch_compile": true,
       "bf16": true,
       "eval_strategy": "steps",
