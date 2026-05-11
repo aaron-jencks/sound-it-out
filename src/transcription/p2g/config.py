@@ -65,6 +65,7 @@ class ConstructedDatasetConfig(DatasetFeatureConfig):
     force_dataset_build: bool
     language_separators: Dict[str, str]
     splits: SplitRatioConfig
+    stratified: bool
 
 
 class WandbConfig(BaseModel):

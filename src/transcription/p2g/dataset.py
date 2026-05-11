@@ -74,38 +74,55 @@ def split_or_load_eval_dataset(ctx: TrainConfig, train_ds: Dataset, force: bool 
             train_ds = output_ds["train"]
             test_ds = output_ds["test"]
         else:
-            logger.info("generating numeric language column")
+            if ctx.dataset.stratified:
+                logger.warning("using stratified sampling for splitting, but FYI, this is VERYYY slow.")
+                logger.info("generating numeric language column")
 
-            if split_output_path_name.exists():
-                logger.info("removing stale cache entry")
-                shutil.rmtree(split_output_path_name)
+                if split_output_path_name.exists():
+                    logger.info("removing stale cache entry")
+                    shutil.rmtree(split_output_path_name)
 
-            languages = sorted(set(train_ds[language_col]))
-            temp_language_feature = str(uuid.uuid4())
+                languages = sorted(set(train_ds[language_col]))
+                language_to_id = {language: i for i, language in enumerate(languages)}
+                temp_language_feature = str(uuid.uuid4())
 
-            train_ds = train_ds.add_column(
-                temp_language_feature,
-                train_ds[language_col],
-            )
+                logger.info("encoding language column")
+                train_ds = train_ds.map(
+                    lambda batch: {
+                        temp_language_feature: [language_to_id[language] for language in batch[language_col]]
+                    },
+                    batched=True,
+                    num_proc=ctx.cpus,
+                )
 
-            train_ds = train_ds.cast_column(
-                temp_language_feature,
-                ClassLabel(names=languages),
-            )
+                logger.info("casting encoded language column")
+                train_ds = train_ds.cast_column(
+                    temp_language_feature,
+                    ClassLabel(names=languages),
+                )
 
-            logger.info("generating train test splits")
-            split_size = determine_eval_size(ctx, train_ds)
-            logger.info(f"using test size of {split_size}")
+                logger.info("generating train test splits")
+                split_size = determine_eval_size(ctx, train_ds)
+                logger.info(f"using test size of {split_size}")
 
-            output_ds = train_ds.train_test_split(
-                seed=ctx.random_seed,
-                test_size=split_size,
-                stratify_by_column=temp_language_feature,
-            )
+                output_ds = train_ds.train_test_split(
+                    seed=ctx.random_seed,
+                    test_size=split_size,
+                    stratify_by_column=temp_language_feature,
+                )
 
-            logger.info("removing old columns")
-            output_ds["train"] = output_ds["train"].remove_columns(temp_language_feature)
-            output_ds["test"] = output_ds["test"].remove_columns(temp_language_feature)
+                logger.info("removing old columns")
+                output_ds["train"] = output_ds["train"].remove_columns(temp_language_feature)
+                output_ds["test"] = output_ds["test"].remove_columns(temp_language_feature)
+            else:
+                logger.info("generating train test splits")
+                split_size = determine_eval_size(ctx, train_ds)
+                logger.info(f"using test size of {split_size}")
+
+                output_ds = train_ds.train_test_split(
+                    seed=ctx.random_seed,
+                    test_size=split_size,
+                )
 
             logger.info("saving dataset to disk")
             output_ds.save_to_disk(split_output_path_name)
