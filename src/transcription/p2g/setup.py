@@ -7,6 +7,7 @@ from typing import Optional
 from datasets import Dataset
 import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from turbot5 import T5ForConditionalGeneration, T5Config
 import wandb
 
 from common import load_tokenizer
@@ -69,16 +70,12 @@ def setup_tokenizer(ctx: TrainConfig, model: Optional[AutoModelForSeq2SeqLM],
     return tokenizer
 
 
-def setup_model(ctx: TrainConfig, model_checkpoint: Optional[Path], attn: Optional[str] = None) -> AutoModelForSeq2SeqLM:
-    if attn is None:
-        return AutoModelForSeq2SeqLM.from_pretrained(
-            ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
-            device_map="auto",
-            torch_dtype=torch.bfloat16 if ctx.model.supports_bf16 else torch.float16,
-        )
-    return AutoModelForSeq2SeqLM.from_pretrained(
+def setup_model(ctx: TrainConfig, model_checkpoint: Optional[Path], attn: str = "basic", device: Optional[str] = None) -> T5ForConditionalGeneration:
+    model = T5ForConditionalGeneration.from_pretrained(
         ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),
-        device_map="auto",
         torch_dtype=torch.bfloat16 if ctx.model.supports_bf16 else torch.float16,
-        attn_implementation=attn
+        attention_type=attn
     )
+    if device is not None:
+        return model.to(device)
+    return model
