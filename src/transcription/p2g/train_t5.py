@@ -12,7 +12,7 @@ from transformers.utils import is_flash_attn_2_available
 import wandb
 
 from config import TrainConfig, DatasetFeatureConfig
-from dataset import create_dataset, preprocess_dataset
+from dataset import load_existing_dataset
 from setup import setup_wandb, parse_args, setup_model, setup_tokenizer
 
 
@@ -62,18 +62,6 @@ def generate_trainer(
 
     # noinspection PyTypeChecker
     tokenizer = setup_tokenizer(ctx, model, train_ds, eval_ds, train_ds_def, eval_ds_def)
-
-    if train_ds is not None:
-        train_ds = preprocess_dataset(
-            ctx, train_ds_def,
-            train_ds, tokenizer
-        )
-    if eval_ds is not None:
-        eval_ds = preprocess_dataset(
-            ctx,
-            eval_ds_def,
-            eval_ds, tokenizer
-        )
 
     data_collator = DataCollatorForSeq2Seq(
         tokenizer=tokenizer,
@@ -136,8 +124,8 @@ def generate_trainer(
 
 
 def train(ctx: TrainConfig):
-    logger.info("creating dataset")
-    train_ds, train_ds_config, eval_ds, eval_ds_config = create_dataset(ctx)
+    logger.info("loading existing dataset")
+    train_ds, train_ds_config, eval_ds, eval_ds_config = load_existing_dataset(ctx)
 
     trainer, _ = generate_trainer(ctx, train_ds, eval_ds, train_ds_config, eval_ds_config)
 

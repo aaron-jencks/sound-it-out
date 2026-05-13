@@ -56,23 +56,15 @@ def setup_tokenizer(ctx: TrainConfig, model: Optional[AutoModelForSeq2SeqLM],
         train_ds_def: Optional[DatasetFeatureConfig] = None,
         eval_ds_def: Optional[DatasetFeatureConfig] = None
 ) -> AutoTokenizer:
-    languages = []
+    languages = set()
 
-    if train_ds is not None:
-        long_names = train_ds.unique(train_ds_def.language_feature)
-        for ln in long_names:
-            if ln not in train_ds_def.language_map:
-                raise ValueError(f"language feature {ln} not found in language map")
-            languages.append(train_ds_def.language_map[ln])
+    if train_ds_def is not None:
+        languages.update(train_ds_def.language_map.values())
 
-    if eval_ds is not None:
-        long_names = eval_ds.unique(eval_ds_def.language_feature)
-        for ln in long_names:
-            if ln not in eval_ds_def.language_map:
-                raise ValueError(f"language feature {ln} not found in language map")
-            languages.append(eval_ds_def.language_map[ln])
+    if eval_ds_def is not None:
+        languages.update(eval_ds_def.language_map.values())
 
-    tokenizer = load_tokenizer(ctx, model, list(set(languages)))
+    tokenizer = load_tokenizer(ctx, model, sorted(languages))
 
     return tokenizer
 

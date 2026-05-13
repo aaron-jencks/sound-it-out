@@ -218,6 +218,17 @@ def assign_new_dataset_timestamp(ctx: TrainConfig) -> Tuple[datetime, Path]:
     return get_dataset_path(ctx)
 
 
+def prepare_datasets(
+        ctx: TrainConfig,
+        train_ds: Dataset, train_ds_ctx: NamedSplitDatasetFeatureConfig,
+        eval_ds: Dataset, eval_ds_ctx: NamedSplitDatasetFeatureConfig
+) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
+    tokenizer = setup_tokenizer(ctx, None, train_ds, eval_ds, train_ds_ctx, eval_ds_ctx)
+    train_ds = preprocess_dataset(ctx, train_ds_ctx, train_ds, tokenizer)
+    eval_ds = preprocess_dataset(ctx, eval_ds_ctx, eval_ds, tokenizer)
+    return train_ds, train_ds_ctx, eval_ds, eval_ds_ctx
+
+
 def load_existing_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
     if ctx.dataset.last_date is None:
         raise RuntimeError("dataset.last_date must be set when loading an existing dataset artifact")
@@ -238,7 +249,8 @@ def load_existing_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetF
         raise RuntimeError(f"tokenizer metadata did not match current config: {output_path_name}")
 
     output_ds = load_from_disk(str(output_path_name))
-    return split_or_load_eval_dataset(ctx, output_ds)
+    train_ds, train_ds_ctx, eval_ds, eval_ds_ctx = split_or_load_eval_dataset(ctx, output_ds)
+    return prepare_datasets(ctx, train_ds, train_ds_ctx, eval_ds, eval_ds_ctx)
 
 
 def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
@@ -400,7 +412,8 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureC
     persist_updated_config(ctx)
     store_metadata(output_path_name, ctx.dataset)
     store_tokenizer_metadata(output_path_name, ctx.model.tokenizer)
-    return split_or_load_eval_dataset(ctx, output_ds, force=True)
+    train_ds, train_ds_ctx, eval_ds, eval_ds_ctx = split_or_load_eval_dataset(ctx, output_ds, force=True)
+    return prepare_datasets(ctx, train_ds, train_ds_ctx, eval_ds, eval_ds_ctx)
 
 
 def preprocess_dataset(
@@ -449,11 +462,5 @@ if __name__ == "__main__":
     logger.info("setting seed")
     set_seed(config.random_seed)
     logger.info("loading/creating dataset")
-    train_ds, train_ctx, eval_ds, eval_ctx = create_dataset(config)
-    logger.info("setting up tokenizer")
-    tokenizer = setup_tokenizer(config, None, train_ds, eval_ds, train_ctx, eval_ctx)
-    logger.info("tokenizing training dataset")
-    preprocess_dataset(config, train_ctx, train_ds, tokenizer)
-    logger.info("tokenizing eval dataset")
-    preprocess_dataset(config, eval_ctx, eval_ds, tokenizer)
+    create_dataset(config)
     logger.info(f"dataset setup complete, dataset written to: ")

@@ -6,16 +6,23 @@ from datasets import Dataset
 import torch
 from tqdm import tqdm
 
+from common import format_language_marker
 from config import generate_argparse, load_configs, TrainConfig, CoreDatasetConfig, DatasetFeatureConfig
-from dataset import create_dataset, load_hf_dataset
-from setup import setup_logging
+from dataset import load_existing_dataset, load_hf_dataset, preprocess_dataset
+from setup import setup_logging, setup_tokenizer
 from train_t5 import generate_trainer
 
 
 def tokenize_dataset(ds_def: DatasetFeatureConfig, ds, tokenizer):
     def preprocess(batch):
+        if ds_def.language_feature is None:
+            raise ValueError("evaluation dataset language feature cannot be None")
+        inputs = [
+            f"{format_language_marker(ds_def.language_map[lang])} {text}"
+            for lang, text in zip(batch[ds_def.language_feature], batch[ds_def.input_feature])
+        ]
         model_inputs = tokenizer(
-            batch[ds_def.input_feature]
+            inputs
         )
         return model_inputs
     tds = ds.map(preprocess, batched=True, remove_columns=ds.column_names)
@@ -51,10 +58,25 @@ def generate_predictions(trainer, tokenizer, tds, batch_size=8):
     return preds
 
 
-def evaluate_dataset(ctx: TrainConfig, ds_def: Optional[CoreDatasetConfig], ds: Dataset, checkpoint: Path) -> Dict[str, float]:
-    trainer, tokenizer = generate_trainer(ctx, None, ds, ds_def, checkpoint)
-    if ds_def is not None and ds_def.prediction_file is not None:
-        tds = tokenize_dataset(ds_def if ds_def is not None else ctx.dataset, ds, tokenizer)
+def evaluate_dataset(
+        ctx: TrainConfig,
+        ds_def: DatasetFeatureConfig,
+        ds: Dataset,
+        checkpoint: Path,
+        preprocessed: bool = False,
+        raw_ds: Optional[Dataset] = None,
+) -> Dict[str, float]:
+    if preprocessed:
+        processed_ds = ds
+        trainer, tokenizer = generate_trainer(ctx, None, processed_ds, None, ds_def, checkpoint)
+    else:
+        tokenizer = setup_tokenizer(ctx, None, None, ds, None, ds_def)
+        processed_ds = preprocess_dataset(ctx, ds_def, ds, tokenizer)
+        trainer, tokenizer = generate_trainer(ctx, None, processed_ds, None, ds_def, checkpoint)
+
+    if ds_def.prediction_file is not None:
+        prediction_source = raw_ds if raw_ds is not None else ds
+        tds = tokenize_dataset(ds_def, prediction_source, tokenizer)
         decoded_predictions = generate_predictions(trainer, tokenizer, tds)
         result_fname = ctx.evaluation.results_prefix / ds_def.prediction_file
         result_fname.parent.mkdir(parents=True, exist_ok=True)
@@ -77,8 +99,8 @@ def main():
         conf.cpus = os.cpu_count()
 
     if conf.evaluation.datasets is None:
-        _, ds = create_dataset(conf)
-        print(evaluate_dataset(conf, None, ds, args.checkpoint))
+        _, _, ds, ds_def = load_existing_dataset(conf)
+        print(evaluate_dataset(conf, ds_def, ds, args.checkpoint, preprocessed=True))
         return
 
     for ds_def in conf.evaluation.datasets:
@@ -87,7 +109,7 @@ def main():
             print(f"{ds_def.name}({ds_def.split})")
         else:
             print(f"{ds_def.name}:{ds_def.subset}({ds_def.split})")
-        print(evaluate_dataset(conf, ds_def, ds, args.checkpoint))
+        print(evaluate_dataset(conf, ds_def, ds, args.checkpoint, raw_ds=ds))
 
 
 if __name__ == "__main__":
