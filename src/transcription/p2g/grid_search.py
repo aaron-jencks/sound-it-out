@@ -10,7 +10,8 @@ import uuid
 from pydantic import BaseModel
 
 from config import generate_argparse, load_configs, TrainConfig
-from train_t5 import train, setup_logging
+from setup import setup_logging
+from train_t5 import train
 
 
 logging.basicConfig(level=logging.INFO)
