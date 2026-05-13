@@ -8,7 +8,8 @@ from tqdm import tqdm
 
 from config import generate_argparse, load_configs, TrainConfig, CoreDatasetConfig, DatasetFeatureConfig
 from dataset import create_dataset, load_hf_dataset
-from setup import setup_logging, generate_trainer
+from setup import setup_logging
+from train_t5 import generate_trainer
 
 
 def tokenize_dataset(ds_def: DatasetFeatureConfig, ds, tokenizer):
