@@ -224,7 +224,9 @@ def prepare_datasets(
         eval_ds: Dataset, eval_ds_ctx: NamedSplitDatasetFeatureConfig
 ) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
     tokenizer = setup_tokenizer(ctx, None, train_ds, eval_ds, train_ds_ctx, eval_ds_ctx)
+    logger.info("preprocessing train split")
     train_ds = preprocess_dataset(ctx, train_ds_ctx, train_ds, tokenizer)
+    logger.info("preprocessing eval split")
     eval_ds = preprocess_dataset(ctx, eval_ds_ctx, eval_ds, tokenizer)
     return train_ds, train_ds_ctx, eval_ds, eval_ds_ctx
 
