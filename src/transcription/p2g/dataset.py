@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from transformers import PreTrainedTokenizer, set_seed
 
 from common import format_language_marker
-from config import TrainConfig, CoreDatasetConfig, NamedSplitDatasetFeatureConfig, ConstructedDatasetConfig
+from config import TrainConfig, CoreDatasetConfig, NamedSplitDatasetFeatureConfig, ConstructedDatasetConfig, TokenizerConfig
 from setup import parse_args, setup_tokenizer
 
 
@@ -156,6 +156,12 @@ def store_metadata(output_dir: Path, metadata: ConstructedDatasetConfig):
         f.write(s)
 
 
+def store_tokenizer_metadata(output_dir: Path, metadata: TokenizerConfig):
+    with open(output_dir / 'tokenizer_metadata.json', 'w+') as f:
+        s = metadata.model_dump_json()
+        f.write(s)
+
+
 def load_metadata(output_dir: Path) -> Optional[ConstructedDatasetConfig]:
     if not output_dir.exists():
         logger.debug(f"cache directory: {output_dir} did not exist!")
@@ -166,6 +172,19 @@ def load_metadata(output_dir: Path) -> Optional[ConstructedDatasetConfig]:
         return ConstructedDatasetConfig.model_validate(metadata)
     except (FileNotFoundError, json.JSONDecodeError, ValidationError) as e:
         logger.debug(f"failed to read metadata from {output_dir}/custom_metadata.json: {e}")
+        return None
+
+
+def load_tokenizer_metadata(output_dir: Path) -> Optional[TokenizerConfig]:
+    if not output_dir.exists():
+        logger.debug(f"cache directory: {output_dir} did not exist!")
+        return None
+    try:
+        with open(output_dir / 'tokenizer_metadata.json', 'r') as f:
+            metadata = json.load(f)
+        return TokenizerConfig.model_validate(metadata)
+    except (FileNotFoundError, json.JSONDecodeError, ValidationError) as e:
+        logger.debug(f"failed to read tokenizer metadata from {output_dir}/tokenizer_metadata.json: {e}")
         return None
 
 
@@ -199,6 +218,29 @@ def assign_new_dataset_timestamp(ctx: TrainConfig) -> Tuple[datetime, Path]:
     return get_dataset_path(ctx)
 
 
+def load_existing_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
+    if ctx.dataset.last_date is None:
+        raise RuntimeError("dataset.last_date must be set when loading an existing dataset artifact")
+
+    _, output_path_name = get_dataset_path(ctx)
+    if not output_path_name.exists():
+        raise FileNotFoundError(f"dataset artifact does not exist: {output_path_name}")
+
+    meta = load_metadata(output_path_name)
+    if meta is None:
+        raise RuntimeError(f"dataset metadata was missing or unreadable: {output_path_name / 'custom_metadata.json'}")
+    if meta != ctx.dataset:
+        raise RuntimeError(f"dataset metadata did not match current config: {output_path_name}")
+    tokenizer_meta = load_tokenizer_metadata(output_path_name)
+    if tokenizer_meta is None:
+        raise RuntimeError(f"tokenizer metadata was missing or unreadable: {output_path_name / 'tokenizer_metadata.json'}")
+    if tokenizer_meta != ctx.model.tokenizer:
+        raise RuntimeError(f"tokenizer metadata did not match current config: {output_path_name}")
+
+    output_ds = load_from_disk(str(output_path_name))
+    return split_or_load_eval_dataset(ctx, output_ds)
+
+
 def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
     logger.info("creating dataset")
 
@@ -207,14 +249,17 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureC
         if ctx.dataset.last_date is not None:
             logger.info(f'checking for cached dataset at {output_path_name}')
             meta = load_metadata(output_path_name)
+            tokenizer_meta = load_tokenizer_metadata(output_path_name)
             logger.debug(f"found metadata: {meta}")
+            logger.debug(f"found tokenizer metadata: {tokenizer_meta}")
             if meta is not None:
                 logger.debug(f"existing metadata: {ctx.dataset}")
-                if meta == ctx.dataset:
+                logger.debug(f"existing tokenizer metadata: {ctx.model.tokenizer}")
+                if meta == ctx.dataset and tokenizer_meta == ctx.model.tokenizer:
                     logger.info('cached dataset metadata matches')
                     output_ds = load_from_disk(str(output_path_name))
                     return split_or_load_eval_dataset(ctx, output_ds)
-                logger.warning("cached dataset metadata did not match current config, rebuilding with a new timestamp")
+                logger.warning("cached dataset or tokenizer metadata did not match current config, rebuilding with a new timestamp")
             else:
                 logger.warning("cached dataset metadata was missing or unreadable, rebuilding with a new timestamp")
         else:
@@ -354,6 +399,7 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureC
     output_ds.save_to_disk(str(output_path_name))
     persist_updated_config(ctx)
     store_metadata(output_path_name, ctx.dataset)
+    store_tokenizer_metadata(output_path_name, ctx.model.tokenizer)
     return split_or_load_eval_dataset(ctx, output_ds, force=True)
 
 
