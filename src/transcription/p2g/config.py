@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Type, TypeVar, Union
 
@@ -56,6 +57,11 @@ class SplitRatioConfig(BaseModel):
     max_eval_size: int
 
 
+class UpdatedConfigConfig(BaseModel):
+    update_file: Path
+    indent: int = 2
+
+
 class ConstructedDatasetConfig(DatasetFeatureConfig):
     definitions: List[ConstructedDatasetDefinitionConfig]
     samples: int
@@ -66,6 +72,8 @@ class ConstructedDatasetConfig(DatasetFeatureConfig):
     language_separators: Dict[str, str]
     splits: SplitRatioConfig
     stratified: bool
+    last_date: Optional[datetime] = None
+    update_config: Optional[UpdatedConfigConfig] = None
 
 
 class WandbConfig(BaseModel):

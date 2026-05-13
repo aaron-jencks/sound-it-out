@@ -1,22 +1,30 @@
 from collections import Counter
+from datetime import datetime
 import json
 import logging
 from pathlib import Path
 import re
 import shutil
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 import uuid
 
-from datasets import load_dataset, IterableDataset, Dataset, load_from_disk, ClassLabel, Value
+from datasets import load_dataset, IterableDataset, Dataset, load_from_disk, ClassLabel
 from pydantic import ValidationError
-from tqdm import tqdm
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedTokenizer, set_seed
 
 from common import format_language_marker
-from config import TrainConfig, CoreDatasetConfig, DatasetFeatureConfig, NamedSplitDatasetFeatureConfig, \
-    ConstructedDatasetConfig
+from config import TrainConfig, CoreDatasetConfig, NamedSplitDatasetFeatureConfig, ConstructedDatasetConfig
+from setup import parse_args, setup_tokenizer
+
 
 logger = logging.getLogger(__file__)
+
+
+def get_dataset_path(ctx: TrainConfig) -> Tuple[datetime, Path]:
+    dt = ctx.dataset.last_date if ctx.dataset.last_date else datetime.now()
+    dir_name = f"{dt.isoformat()}-{ctx.dataset.output_dataset_name}"
+    output_path_name = ctx.dataset.hf_cache / dir_name
+    return dt, output_path_name
 
 
 def load_hf_dataset(definition: CoreDatasetConfig, cache_loc: Path, streaming: bool = True) -> Union[IterableDataset, Dataset]:
@@ -161,23 +169,62 @@ def load_metadata(output_dir: Path) -> Optional[ConstructedDatasetConfig]:
         return None
 
 
+def persist_updated_config(ctx: TrainConfig):
+    if ctx.dataset.update_config is None:
+        return
+
+    logger.info(f"writing updated dataset config to {ctx.dataset.update_config}")
+    ctx.dataset.update_config.update_file.parent.mkdir(parents=True, exist_ok=True)
+    ds = ctx.dataset.last_date.isoformat() if ctx.dataset.last_date else None
+    output_dict = {
+        "dataset": {
+            "last_date": ds,
+        }
+    }
+    if ctx.dataset.update_config.update_file.exists():
+        with open(ctx.dataset.update_config.update_file, 'r') as f:
+            output_dict = json.load(f)
+            if "dataset" not in output_dict:
+                output_dict["dataset"] = {
+                    "last_date": ds,
+                }
+            else:
+                output_dict["dataset"]["last_date"] = ds
+    with open(ctx.dataset.update_config.update_file, 'w+') as f:
+        json.dump(output_dict, f, indent=ctx.dataset.update_config.indent)
+
+
+def assign_new_dataset_timestamp(ctx: TrainConfig) -> Tuple[datetime, Path]:
+    ctx.dataset.last_date = datetime.now()
+    return get_dataset_path(ctx)
+
+
 def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
     logger.info("creating dataset")
 
-    output_path_name = ctx.dataset.hf_cache / ctx.dataset.output_dataset_name
+    output_dt, output_path_name = get_dataset_path(ctx)
     if not ctx.dataset.force_dataset_build:
-        logger.info('checking for cached dataset')
-        meta = load_metadata(output_path_name)
-        logger.debug(f"found metadata: {meta}")
-        if meta is not None:
-            logger.debug(f"existing metadata: {ctx.dataset}")
-            if meta == ctx.dataset:
-                logger.info('cached dataset metadata matches')
-                output_ds = load_from_disk(str(output_path_name))
-                return split_or_load_eval_dataset(ctx, output_ds)
-        logger.info("dataset cache doesn't exist or isn't usable, creating new dataset")
-        if output_path_name.exists():
-            shutil.rmtree(output_path_name)
+        if ctx.dataset.last_date is not None:
+            logger.info(f'checking for cached dataset at {output_path_name}')
+            meta = load_metadata(output_path_name)
+            logger.debug(f"found metadata: {meta}")
+            if meta is not None:
+                logger.debug(f"existing metadata: {ctx.dataset}")
+                if meta == ctx.dataset:
+                    logger.info('cached dataset metadata matches')
+                    output_ds = load_from_disk(str(output_path_name))
+                    return split_or_load_eval_dataset(ctx, output_ds)
+                logger.warning("cached dataset metadata did not match current config, rebuilding with a new timestamp")
+            else:
+                logger.warning("cached dataset metadata was missing or unreadable, rebuilding with a new timestamp")
+        else:
+            logger.info("no dataset timestamp configured, creating a new dataset")
+    else:
+        logger.info("force dataset build enabled, creating a new dataset")
+
+    output_dt, output_path_name = assign_new_dataset_timestamp(ctx)
+    logger.info(f"building dataset artifact for timestamp {output_dt.isoformat()}")
+    logger.info(f"dataset will be written to {output_path_name}")
 
     # count how many samples we intend to have
     total_samples = 0
@@ -305,6 +352,7 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureC
     # Create an in-memory dataset
     output_ds = Dataset.from_dict(final_dataset)
     output_ds.save_to_disk(str(output_path_name))
+    persist_updated_config(ctx)
     store_metadata(output_path_name, ctx.dataset)
     return split_or_load_eval_dataset(ctx, output_ds, force=True)
 
@@ -348,3 +396,18 @@ def preprocess_dataset(
         num_proc=ctx.cpus,
         cache_file_name=str(cache_file)
     )
+
+
+if __name__ == "__main__":
+    config = parse_args("generates the dataset necessary for training")
+    logger.info("setting seed")
+    set_seed(config.random_seed)
+    logger.info("loading/creating dataset")
+    train_ds, train_ctx, eval_ds, eval_ctx = create_dataset(config)
+    logger.info("setting up tokenizer")
+    tokenizer = setup_tokenizer(config, None, train_ds, eval_ds, train_ctx, eval_ctx)
+    logger.info("tokenizing training dataset")
+    preprocess_dataset(config, train_ctx, train_ds, tokenizer)
+    logger.info("tokenizing eval dataset")
+    preprocess_dataset(config, eval_ctx, eval_ds, tokenizer)
+    logger.info(f"dataset setup complete, dataset written to: ")
