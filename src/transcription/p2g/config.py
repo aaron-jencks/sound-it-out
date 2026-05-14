@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Type, TypeVar, Union
+from typing import Dict, List, Literal, Optional, Type, TypeVar, Union
 
 from cascade_config import CascadeConfig
 from pydantic import BaseModel
@@ -26,22 +26,44 @@ class ModelConfig(BaseModel):
     supports_bf16: bool
 
 
-class DatasetFeatureConfig(BaseModel):
-    input_feature: str
-    output_feature: str
-    language_feature: Optional[str]
-
-
-class NamedDatasetConfig(DatasetFeatureConfig):
-    name: str
-
-
-class DatasetConfig(NamedDatasetConfig):
+class DatasetMetaConfig(BaseModel):
     name: str
     split: str
     subset: Optional[str] = None
     languages: List[str]
-    language_map: Dict[str, str]
+    language_map: Optional[Dict[str, str]] = None
+
+
+class PartialDatasetFeatureConfig(BaseModel):
+    output_feature: str
+    language_feature: Optional[str]
+
+
+class FullDatasetFeatureConfig(PartialDatasetFeatureConfig):
+    input_feature: str
+
+
+class NamedFullDatasetFeatureConfig(FullDatasetFeatureConfig):
+    name: str
+
+
+class DatasetConfig(DatasetMetaConfig, FullDatasetFeatureConfig):
+    pass
+
+
+class ConstructionInputDatasetConfig(DatasetMetaConfig, PartialDatasetFeatureConfig):
+    pass
+
+
+class RomanizationConfig(BaseModel):
+    uroman_path: Path
+    perl_path: str = "perl"
+
+
+class TransformationConfig(BaseModel):
+    type: Literal["phonemize", "romanize"]
+    espeak_path: Optional[Path] = None
+    romanization: Optional[RomanizationConfig] = None
 
 
 class SplitRatioConfig(BaseModel):
@@ -62,8 +84,10 @@ class CoreConfig(BaseModel):
 
 class PreprocessingConfig(CoreConfig):
     tokenizer: TokenizerConfig
-    output_dataset: NamedDatasetConfig
-    input_datasets: List[DatasetConfig]
+    output_dataset: NamedFullDatasetFeatureConfig
+    input_datasets: List[ConstructionInputDatasetConfig]
+    words_per_sample: int
+    transform: TransformationConfig
     samples: int
     shuffle_buffer: int
     hf_cache: Path

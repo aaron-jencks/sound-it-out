@@ -8,11 +8,13 @@
     "output_feature": "text",
     "language_feature": "language"
   },
+  "transform": {
+    "type": "phonemize"
+  },
   "input_datasets": [
     {
       "name": "mugezhang/8lang_multirepr_pretrain_interleaved",
       "split": "train",
-      "input_feature": "ipa_stripped",
       "output_feature": "text",
       "language_feature": "language",
       "languages": [

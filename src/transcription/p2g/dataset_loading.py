@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 from datasets import Dataset, DatasetDict, IterableDataset, load_dataset, load_from_disk
 
@@ -11,18 +11,25 @@ logger = logging.getLogger(__file__)
 PREPROCESSED_FEATURES = ("input_ids", "attention_mask", "labels")
 
 
-def load_hf_dataset(definition: DatasetConfig, streaming: bool = True) -> Union[IterableDataset, Dataset]:
+def load_hf_dataset(
+        definition: DatasetConfig,
+        streaming: bool = True,
+        cache_loc: Optional[Path] = None,
+) -> Union[IterableDataset, Dataset]:
+    kwargs = {"streaming": streaming}
+    if cache_loc is not None:
+        kwargs["cache_dir"] = str(cache_loc)
     if definition.subset is None:
         logger.info(f'loading {definition.name} from HF dataset.')
         dataset = load_dataset(
             definition.name, split=definition.split,
-            streaming=streaming
+            **kwargs,
         )
     else:
         logger.info(f'loading {definition.name}/{definition.subset} from HF subset.')
         dataset = load_dataset(
             definition.name, definition.subset, split=definition.split,
-            streaming=streaming
+            **kwargs,
         )
     return dataset
 

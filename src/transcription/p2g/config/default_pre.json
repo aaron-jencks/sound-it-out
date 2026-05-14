@@ -3,6 +3,7 @@
     "name": "google/byt5-small",
     "max_sequence_length": 1024
   },
+  "words_per_sample": 100,
   "splits": {
     "eval_ratio": 0.2,
     "max_eval_size": 160000

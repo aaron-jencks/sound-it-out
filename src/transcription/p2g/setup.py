@@ -60,10 +60,16 @@ def setup_tokenizer(ctx: EvaluationConfig, model: Optional[AutoModelForSeq2SeqLM
     languages = set()
 
     if train_ds_def is not None:
-        languages.update(train_ds_def.language_map.values())
+        if train_ds_def.language_map is not None:
+            languages.update(train_ds_def.language_map.values())
+        else:
+            languages.update(train_ds_def.languages)
 
     if eval_ds_def is not None:
-        languages.update(eval_ds_def.language_map.values())
+        if eval_ds_def.language_map is not None:
+            languages.update(eval_ds_def.language_map.values())
+        else:
+            languages.update(eval_ds_def.languages)
 
     tokenizer = load_tokenizer(ctx, model, sorted(languages))
 

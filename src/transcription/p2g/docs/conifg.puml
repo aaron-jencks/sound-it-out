@@ -1,24 +1,32 @@
 @startuml
-class DatasetFeatureConfig {
-+ input_feature : str
+class DatasetMetaConfig {
++ split : str
++ subset : Optional[str]
++ languages : List[str]
++ language_map : Optional[Dict[str, str]]
+}
+
+class PartialDatasetFeatureConfig {
++ name : str
 + output_feature : str
 + language_feature : Optional[str]
 }
 
-class NamedDatasetConfig {
-+ name : str
+class FullDatasetFeatureConfig {
++ input_feature : str
 }
 
-DatasetFeatureConfig <|-- NamedDatasetConfig
+PartialDatasetFeatureConfig <|-- FullDatasetFeatureConfig
 
-class DatasetConfig {
-+ split : str
-+ subset : Optional[str]
-+ languages : List[str]
-+ language_map : Dict[str, str]
-}
+class DatasetConfig
 
-NamedDatasetConfig <|-- DatasetConfig
+FullDatasetFeatureConfig <|-- DatasetConfig
+DatasetMetaConfig <|-- DatasetConfig
+
+class ConstructionInputDatasetConfig
+
+PartialDatasetFeatureConfig <|-- ConstructionInputDatasetConfig
+DatasetMetaConfig <|-- ConstructionInputDatasetConfig
 
 class SplitConfig {
 + eval_ratio : float
@@ -31,8 +39,8 @@ class CoreConfig {
 }
 
 class PreprocessingConfig {
-+ output_dataset : NamedDatasetConfig
-+ input_datasets : List[DatasetConfig]
++ output_dataset : FullDatasetFeatureConfig
++ input_datasets : List[ConstructionInputDatasetConfig]
 + samples : int
 + shuffle_buffer : int
 + hf_cache : Path
@@ -40,8 +48,8 @@ class PreprocessingConfig {
 }
 
 CoreConfig <|-- PreprocessingConfig
-NamedDatasetConfig -> PreprocessingConfig::output_dataset
-DatasetConfig --> PreprocessingConfig::input_datasets
+FullDatasetFeatureConfig -> PreprocessingConfig::output_dataset
+ConstructionInputDatasetConfig --> PreprocessingConfig::input_datasets
 SplitConfig -> PreprocessingConfig::splits
 
 class EvaluationConfig {
