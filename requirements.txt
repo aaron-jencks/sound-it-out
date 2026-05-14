@@ -53,10 +53,4 @@ vega-datasets>=0.9
 wandb>=0.22
 zipp>=3.19
 
-packaging
-psutil
-wheel
-ninja
-flash-attn
-
 git+https://github.com/aaron-jencks/phonemizer.git
