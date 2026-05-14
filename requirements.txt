@@ -58,3 +58,5 @@ psutil
 wheel
 ninja
 flash-attn
+
+git+https://github.com/aaron-jencks/phonemizer.git
