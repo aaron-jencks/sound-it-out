@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Union
 
 from datasets import Dataset, DatasetDict, IterableDataset, load_dataset, load_from_disk
 
-from config import DatasetConfig, TrainConfig
+from transcription.p2g.config import ConstructionInputDatasetConfig, DatasetConfig, TrainConfig
 
 
 logger = logging.getLogger(__file__)
@@ -12,7 +12,7 @@ PREPROCESSED_FEATURES = ("input_ids", "attention_mask", "labels")
 
 
 def load_hf_dataset(
-        definition: DatasetConfig,
+        definition: Union[DatasetConfig, ConstructionInputDatasetConfig],
         streaming: bool = True,
         cache_loc: Optional[Path] = None,
 ) -> Union[IterableDataset, Dataset]:

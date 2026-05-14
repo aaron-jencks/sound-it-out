@@ -9,12 +9,19 @@ import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import wandb
 
-from common import load_tokenizer
-from config import DatasetConfig, EvaluationConfig, TrainConfig, generate_argparse, load_configs
+from transcription.p2g.common import load_tokenizer
+from transcription.p2g.config import (
+    DatasetConfig,
+    EvaluationConfig,
+    PreprocessingConfig,
+    TrainConfig,
+    generate_argparse,
+    load_configs,
+)
 
 
 logger = logging.getLogger(__file__)
-TConfig = TypeVar("TConfig", TrainConfig, EvaluationConfig)
+TConfig = TypeVar("TConfig", TrainConfig, EvaluationConfig, PreprocessingConfig)
 
 
 def setup_logging(debug: bool = False):
@@ -29,8 +36,12 @@ def setup_logging(debug: bool = False):
     logging.getLogger("git").setLevel(logging.WARNING)
 
 
-def parse_args(description: str, schema: Type[TConfig] = TrainConfig) -> TConfig:
-    ap = generate_argparse(description)
+def parse_args(
+        description: str,
+        schema: Type[TConfig] = TrainConfig,
+        default_config: Path = Path("transcription/p2g/config/default.json"),
+) -> TConfig:
+    ap = generate_argparse(description, default_config)
     args = ap.parse_args()
     setup_logging(args.debug)
     config = load_configs(args.configs, args.default_config, schema=schema)

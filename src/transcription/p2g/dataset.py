@@ -2,23 +2,18 @@ from collections import Counter
 from datetime import datetime
 import logging
 from pathlib import Path
-import sys
 from typing import Callable, Tuple
 
 from datasets import Dataset, DatasetDict
 from transformers import set_seed
 
-from config import ConstructionInputDatasetConfig, PreprocessingConfig
-from dataset_loading import load_hf_dataset
-from setup import parse_args
+from transcription.g2p import phonemize_romanize
+from transcription.p2g.config import ConstructionInputDatasetConfig, PreprocessingConfig
+from transcription.p2g.dataset_loading import load_hf_dataset
+from transcription.p2g.setup import parse_args
 
 
 logger = logging.getLogger(__file__)
-ROOT_DIR = Path(__file__).resolve().parent.parent
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
-from g2p import phonemize_romanize
-
 
 TransformFn = Callable[[str, str], str]
 
@@ -241,7 +236,11 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
 
 
 def main():
-    config = parse_args("constructs a dataset", schema=PreprocessingConfig)
+    config = parse_args(
+        "constructs a dataset",
+        default_config=Path("transcription/p2g/config/default_pre.json"),
+        schema=PreprocessingConfig,
+    )
     logger.info("setting seed")
     set_seed(config.random_seed)
     logger.info("loading/creating dataset")

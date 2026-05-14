@@ -11,9 +11,9 @@ from transformers import AutoTokenizer, DataCollatorForSeq2Seq, set_seed, \
 from transformers.utils import is_flash_attn_2_available
 import wandb
 
-from config import DatasetConfig, TrainConfig
-from dataset_loading import load_existing_dataset
-from setup import setup_wandb, parse_args, setup_model, setup_tokenizer
+from transcription.p2g.config import DatasetConfig, TrainConfig
+from transcription.p2g.dataset_loading import load_existing_dataset
+from transcription.p2g.setup import parse_args, setup_model, setup_tokenizer, setup_wandb
 
 
 logger = logging.getLogger(__file__)

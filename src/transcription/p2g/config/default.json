@@ -23,7 +23,7 @@
       "metric_for_best_model": "bleu",
       "logging_steps": 0.01
     },
-    "checkpoint_prefix": "checkpoints",
+    "checkpoint_prefix": "transcription/p2g/checkpoints",
     "generation": {
       "max_new_tokens": 128,
       "do_sample": false,

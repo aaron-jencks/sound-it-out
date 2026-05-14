@@ -2,14 +2,14 @@ from typing import List, Optional
 
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-from config import TrainConfig
+from transcription.p2g.config import EvaluationConfig
 
 
 def format_language_marker(s: str) -> str:
     return f"<lang:{s}>"
 
 
-def load_tokenizer(ctx: TrainConfig, model: Optional[AutoModelForSeq2SeqLM], extra_langs: List[str]) -> AutoTokenizer:
+def load_tokenizer(ctx: EvaluationConfig, model: Optional[AutoModelForSeq2SeqLM], extra_langs: List[str]) -> AutoTokenizer:
     # noinspection PyTypeChecker
     tok = AutoTokenizer.from_pretrained(
         ctx.model.tokenizer.name,

@@ -9,9 +9,9 @@ import uuid
 
 from pydantic import BaseModel
 
-from config import generate_argparse, load_configs, TrainConfig
-from setup import setup_logging
-from train_t5 import train
+from transcription.p2g.config import TrainConfig, generate_argparse, load_configs
+from transcription.p2g.setup import setup_logging
+from transcription.p2g.train_t5 import train
 
 
 logging.basicConfig(level=logging.INFO)
@@ -173,7 +173,12 @@ def main():
     ap = generate_argparse('performs grid search on ByT5 trainer')
     ag = ap.add_argument_group('grid search')
     ag.add_argument('-p', '--parameters', type=Path, nargs='*', help='the parameter configs to use')
-    ag.add_argument('--default-parameters', type=Path, default=Path('config/parameters/default.json'), help='the default parameters to use')
+    ag.add_argument(
+        '--default-parameters',
+        type=Path,
+        default=Path('transcription/p2g/config/parameters/default.json'),
+        help='the default parameters to use',
+    )
     args = ap.parse_args()
     setup_logging()
     base_ctx = load_configs(args.configs, default_config=args.default_config)

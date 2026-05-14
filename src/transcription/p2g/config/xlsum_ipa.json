@@ -18,6 +18,6 @@
         }
       }
     ],
-    "results_prefix": "results/xlsum"
+    "results_prefix": "transcription/p2g/results/xlsum"
   }
 }

@@ -7,10 +7,10 @@ from datasets import Dataset
 import torch
 from tqdm import tqdm
 
-from config import DatasetConfig, EvaluationConfig, generate_argparse, load_configs
-from dataset_loading import load_saved_dataset, validate_preprocessed_dataset
-from setup import setup_logging
-from train_t5 import generate_trainer
+from transcription.p2g.config import DatasetConfig, EvaluationConfig, generate_argparse, load_configs
+from transcription.p2g.dataset_loading import load_saved_dataset, validate_preprocessed_dataset
+from transcription.p2g.setup import setup_logging
+from transcription.p2g.train_t5 import generate_trainer
 
 
 def generate_predictions(trainer, tokenizer, tds, batch_size=8):
@@ -72,7 +72,7 @@ def evaluate_dataset(
 
 
 def main():
-    ap = generate_argparse()
+    ap = generate_argparse(default_config=Path("transcription/p2g/config/default.json"))
     ag = ap.add_argument_group('evaluation')
     ag.add_argument('--checkpoint', type=str, required=True, help='The checkpoint to be evaluated.')
     args = ap.parse_args()
