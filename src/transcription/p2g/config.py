@@ -26,30 +26,21 @@ class ModelConfig(BaseModel):
     supports_bf16: bool
 
 
-class LanguageConfig(BaseModel):
-    language: str
-    sentence_separators: str
-
-
 class DatasetFeatureConfig(BaseModel):
     input_feature: str
     output_feature: str
     language_feature: Optional[str]
+
+
+class PreprocessingInputDatasetConfig(DatasetFeatureConfig):
+    languages: List[str]
     language_map: Dict[str, str]
 
 
-class NamedSplitDatasetFeatureConfig(DatasetFeatureConfig):
+class DatasetConfig(PreprocessingInputDatasetConfig):
     name: str
     split: str
-
-
-class CoreDatasetConfig(NamedSplitDatasetFeatureConfig):
     subset: Optional[str]
-    prediction_file: Optional[Path]
-
-
-class ConstructedDatasetDefinitionConfig(CoreDatasetConfig):
-    language_splits: List[str]
 
 
 class SplitRatioConfig(BaseModel):
@@ -82,19 +73,33 @@ class WandbConfig(BaseModel):
     settings: Dict
 
 
-class EvaluationConfig(BaseModel):
-    datasets: Optional[List[CoreDatasetConfig]]
+class CoreConfig(BaseModel):
+    random_seed: int
+    cpus: int
+
+
+class PreprocessingConfig(CoreConfig):
+    tokenizer: TokenizerConfig
+    output_dataset: DatasetFeatureConfig
+    input_datasets: List[PreprocessingInputDatasetConfig]
+    samples: int
+    shuffle_buffer: int
+    hf_cache: Path
+    splits: SplitRatioConfig
+
+
+class EvaluationConfig(CoreConfig):
+    evaluation_dataset: DatasetConfig
     results_prefix: Path
 
 
-class TrainConfig(BaseModel):
+class TrainConfig(EvaluationConfig):
     model: ModelConfig
     dataset: ConstructedDatasetConfig
     grid_search: GridSearchConfig
     evaluation: EvaluationConfig
     wandb: WandbConfig
-    random_seed: int
-    cpus: int
+
 
 def load_configs(files: Optional[List[Path]], default_config: Path, schema: Type[BaseModel] = TrainConfig) -> BaseModel:
     conf = CascadeConfig(validation_schema=schema.model_json_schema())

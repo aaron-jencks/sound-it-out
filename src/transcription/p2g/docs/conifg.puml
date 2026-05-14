@@ -5,22 +5,32 @@ class DatasetFeatureConfig {
 + language_feature : Optional[str]
 }
 
-class DatasetConfig {
-+ name : str
-+ split : str
-+ subset : Optional[str]
+class PreprocessingInputDatasetConfig {
 + languages : List[str]
 + language_map : Dict[str, str]
 }
 
-DatasetFeatureConfig <|-- DatasetConfig
+DatasetFeatureConfig <|-- PreprocessingInputDatasetConfig
+
+class DatasetConfig {
++ name : str
++ split : str
++ subset : Optional[str]
+}
+
+PreprocessingInputDatasetConfig <|-- DatasetConfig
 
 class SplitConfig {
 + eval_ratio : float
 + max_eval_size : int
 }
 
-class ConstructedDatasetConfig {
+class CoreConfig {
++ random_seed : int
++ cpus : int
+}
+
+class PreprocessingConfig {
 + output_dataset : DatasetFeatureConfig
 + input_datasets : List[Datasetconfig]
 + samples : int
@@ -29,15 +39,23 @@ class ConstructedDatasetConfig {
 + splits : SplitConfig
 }
 
-DatasetFeatureConfig -> ConstructedDatasetConfig::output_dataset
-DatasetConfig -> ConstructedDatasetConfig::input_datasets
-SplitConfig -> ConstructedDatasetConfig::splits
+CoreConfig <|-- PreprocessingConfig
+DatasetFeatureConfig -> PreprocessingConfig::output_dataset
+PreprocessingInputDatasetConfig --> PreprocessingConfig::input_datasets
+SplitConfig -> PreprocessingConfig::splits
 
-class RunConfig {
-+ construction : ConstructedDatasetConfig
-+ evaluation : DatasetConfig
+class EvaluationConfig {
++ evaluation_dataset : DatasetConfig
++ results_path : Path
 }
 
-DatasetConfig -> RunConfig::evaluation
-ConstructedDatasetConfig -> RunConfig::construction
+CoreConfig <|-- EvaluationConfig
+
+class TrainConfig {
++ train_dataset : DatasetConfig
+}
+
+EvaluationConfig <|-- TrainConfig
+DatasetConfig -> EvaluationConfig::evaluation_dataset
+DatasetConfig -> TrainConfig::train_dataset
 @enduml
