@@ -1,0 +1,15 @@
+{
+  "tokenizer": {
+    "name": "google/byt5-small",
+    "max_sequence_length": 1024
+  },
+  "splits": {
+    "eval_ratio": 0.2,
+    "max_eval_size": 160000
+  },
+  "samples": 1000000,
+  "shuffle_buffer": 10000,
+  "hf_cache": "./cache/huggingface",
+  "random_seed": 42,
+  "cpus": -1
+}

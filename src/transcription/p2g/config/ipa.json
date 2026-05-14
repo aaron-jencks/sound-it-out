@@ -12,43 +12,50 @@
       "max_new_tokens": 512
     }
   },
-  "dataset": {
-    "definitions": [
-      {
-        "name": "mugezhang/8lang_multirepr_pretrain_interleaved",
-        "split": "train",
-        "subset": null,
-        "input_feature": "ipa_stripped",
-        "output_feature": "text",
-        "language_feature": "language",
-        "language_splits": [
-          "eng", "spa",
-          "rus", "pol",
-          "hin", "urd",
-          "mal", "tam"
-        ],
-        "prediction_file": null,
-        "language_map": {
-          "eng": "en",
-          "spa": "es",
-          "rus": "ru",
-          "pol": "po",
-          "hin": "hi",
-          "urd": "ur",
-          "mal": "ml",
-          "tam": "tm"
-        }
-      }
+  "train_dataset": {
+    "name": "preprocessed_ipa_dataset",
+    "input_feature": "ipa",
+    "output_feature": "text",
+    "language_feature": "language",
+    "split": "train",
+    "languages": [
+      "eng", "spa",
+      "rus", "pol",
+      "hin", "urd",
+      "mal", "tam"
     ],
-    "language_separators": {
-      "eng": ".?!…\\n",
-      "spa": ".¡¿?!…\\n",
-      "rus": ".?!…\\n",
-      "pol": ".?!…\\n",
-      "hin": "।.?!…\\n",
-      "urd": "\\n۔।؟.?!…",
-      "tam": ".?!…\\n",
-      "mal": ".?!…\\n"
+    "language_map": {
+      "eng": "en",
+      "spa": "es",
+      "rus": "ru",
+      "pol": "po",
+      "hin": "hi",
+      "urd": "ur",
+      "mal": "ml",
+      "tam": "tm"
+    }
+  },
+  "evaluation_dataset": {
+    "name": "preprocessed_ipa_dataset",
+    "input_feature": "ipa",
+    "output_feature": "text",
+    "language_feature": "language",
+    "split": "test",
+    "languages": [
+      "eng", "spa",
+      "rus", "pol",
+      "hin", "urd",
+      "mal", "tam"
+    ],
+    "language_map": {
+      "eng": "en",
+      "spa": "es",
+      "rus": "ru",
+      "pol": "po",
+      "hin": "hi",
+      "urd": "ur",
+      "mal": "ml",
+      "tam": "tm"
     }
   }
 }

@@ -39,7 +39,7 @@ class NamedDatasetConfig(DatasetFeatureConfig):
 class DatasetConfig(NamedDatasetConfig):
     name: str
     split: str
-    subset: Optional[str]
+    subset: Optional[str] = None
     languages: List[str]
     language_map: Dict[str, str]
 
@@ -96,6 +96,6 @@ def generate_argparse(description: str = '') -> ArgumentParser:
     parser = ArgumentParser(description=description)
     ag = parser.add_argument_group('cascading config files')
     ag.add_argument('configs', type=Path, nargs='*', help='cascading config files to use')
-    ag.add_argument('--default-config', type=Path, default=Path('config/default.json'), help='default config file')
+    ag.add_argument('--default-config', type=Path, default=Path('transcription/p2g/config/default_pre.json'), help='default config file')
     parser.add_argument('--debug', action='store_true', help='enable debug print statements')
     return parser
