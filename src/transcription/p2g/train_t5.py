@@ -11,7 +11,7 @@ from transformers import AutoTokenizer, DataCollatorForSeq2Seq, set_seed, \
 from transformers.utils import is_flash_attn_2_available
 import wandb
 
-from config import TrainConfig, DatasetFeatureConfig
+from config import DatasetConfig, TrainConfig
 from dataset_loading import load_existing_dataset
 from setup import setup_wandb, parse_args, setup_model, setup_tokenizer
 
@@ -22,8 +22,8 @@ logger = logging.getLogger(__file__)
 def generate_trainer(
         ctx: TrainConfig,
         train_ds: Optional[Dataset], eval_ds: Optional[Dataset],
-        train_ds_def: Optional[DatasetFeatureConfig] = None,
-        eval_ds_def: Optional[DatasetFeatureConfig] = None,
+        train_ds_def: Optional[DatasetConfig] = None,
+        eval_ds_def: Optional[DatasetConfig] = None,
         model_checkpoint: Optional[Path] = None
 ) -> Tuple[Trainer, AutoTokenizer]:
     logger.info('setting up training pipeline')
@@ -140,7 +140,7 @@ def train(ctx: TrainConfig):
 
 
 def main():
-    config = parse_args("trains a p2g model")
+    config = parse_args("trains a p2g model", schema=TrainConfig)
     set_seed(config.random_seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False

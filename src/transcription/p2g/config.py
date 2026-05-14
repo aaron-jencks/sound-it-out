@@ -32,39 +32,21 @@ class DatasetFeatureConfig(BaseModel):
     language_feature: Optional[str]
 
 
-class PreprocessingInputDatasetConfig(DatasetFeatureConfig):
-    languages: List[str]
-    language_map: Dict[str, str]
+class NamedDatasetConfig(DatasetFeatureConfig):
+    name: str
 
 
-class DatasetConfig(PreprocessingInputDatasetConfig):
+class DatasetConfig(NamedDatasetConfig):
     name: str
     split: str
     subset: Optional[str]
+    languages: List[str]
+    language_map: Dict[str, str]
 
 
 class SplitRatioConfig(BaseModel):
     eval_ratio: float
     max_eval_size: int
-
-
-class UpdatedConfigConfig(BaseModel):
-    update_file: Path
-    indent: int = 2
-
-
-class ConstructedDatasetConfig(DatasetFeatureConfig):
-    definitions: List[ConstructedDatasetDefinitionConfig]
-    samples: int
-    shuffle_buffer: int
-    hf_cache: Path
-    output_dataset_name: str
-    force_dataset_build: bool
-    language_separators: Dict[str, str]
-    splits: SplitRatioConfig
-    stratified: bool
-    last_date: Optional[datetime] = None
-    update_config: Optional[UpdatedConfigConfig] = None
 
 
 class WandbConfig(BaseModel):
@@ -80,8 +62,8 @@ class CoreConfig(BaseModel):
 
 class PreprocessingConfig(CoreConfig):
     tokenizer: TokenizerConfig
-    output_dataset: DatasetFeatureConfig
-    input_datasets: List[PreprocessingInputDatasetConfig]
+    output_dataset: NamedDatasetConfig
+    input_datasets: List[DatasetConfig]
     samples: int
     shuffle_buffer: int
     hf_cache: Path
@@ -89,16 +71,15 @@ class PreprocessingConfig(CoreConfig):
 
 
 class EvaluationConfig(CoreConfig):
+    model: ModelConfig
     evaluation_dataset: DatasetConfig
     results_prefix: Path
+    wandb: WandbConfig
 
 
 class TrainConfig(EvaluationConfig):
-    model: ModelConfig
-    dataset: ConstructedDatasetConfig
+    train_dataset: DatasetConfig
     grid_search: GridSearchConfig
-    evaluation: EvaluationConfig
-    wandb: WandbConfig
 
 
 def load_configs(files: Optional[List[Path]], default_config: Path, schema: Type[BaseModel] = TrainConfig) -> BaseModel:

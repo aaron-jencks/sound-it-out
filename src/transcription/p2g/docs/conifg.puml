@@ -5,20 +5,20 @@ class DatasetFeatureConfig {
 + language_feature : Optional[str]
 }
 
-class PreprocessingInputDatasetConfig {
+class NamedDatasetConfig {
++ name : str
+}
+
+DatasetFeatureConfig <|-- NamedDatasetConfig
+
+class DatasetConfig {
++ split : str
++ subset : Optional[str]
 + languages : List[str]
 + language_map : Dict[str, str]
 }
 
-DatasetFeatureConfig <|-- PreprocessingInputDatasetConfig
-
-class DatasetConfig {
-+ name : str
-+ split : str
-+ subset : Optional[str]
-}
-
-PreprocessingInputDatasetConfig <|-- DatasetConfig
+NamedDatasetConfig <|-- DatasetConfig
 
 class SplitConfig {
 + eval_ratio : float
@@ -31,8 +31,8 @@ class CoreConfig {
 }
 
 class PreprocessingConfig {
-+ output_dataset : DatasetFeatureConfig
-+ input_datasets : List[Datasetconfig]
++ output_dataset : NamedDatasetConfig
++ input_datasets : List[DatasetConfig]
 + samples : int
 + shuffle_buffer : int
 + hf_cache : Path
@@ -40,8 +40,8 @@ class PreprocessingConfig {
 }
 
 CoreConfig <|-- PreprocessingConfig
-DatasetFeatureConfig -> PreprocessingConfig::output_dataset
-PreprocessingInputDatasetConfig --> PreprocessingConfig::input_datasets
+NamedDatasetConfig -> PreprocessingConfig::output_dataset
+DatasetConfig --> PreprocessingConfig::input_datasets
 SplitConfig -> PreprocessingConfig::splits
 
 class EvaluationConfig {

@@ -2,7 +2,7 @@ import datetime as dt
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Type, TypeVar
 
 from datasets import Dataset
 import torch
@@ -10,10 +10,11 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import wandb
 
 from common import load_tokenizer
-from config import load_configs, TrainConfig, generate_argparse, DatasetFeatureConfig
+from config import DatasetConfig, EvaluationConfig, TrainConfig, generate_argparse, load_configs
 
 
 logger = logging.getLogger(__file__)
+TConfig = TypeVar("TConfig", TrainConfig, EvaluationConfig)
 
 
 def setup_logging(debug: bool = False):
@@ -28,22 +29,22 @@ def setup_logging(debug: bool = False):
     logging.getLogger("git").setLevel(logging.WARNING)
 
 
-def parse_args(description: str) -> TrainConfig:
+def parse_args(description: str, schema: Type[TConfig] = TrainConfig) -> TConfig:
     ap = generate_argparse(description)
     args = ap.parse_args()
     setup_logging(args.debug)
-    config = load_configs(args.configs, args.default_config)
+    config = load_configs(args.configs, args.default_config, schema=schema)
     if config.cpus < 0:
         config.cpus = os.cpu_count()
     return config
 
 
-def generate_wandb_run_name(ctx: TrainConfig) -> str:
+def generate_wandb_run_name(ctx: EvaluationConfig) -> str:
     d_string = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     return f"fine-tuning-{d_string}"
 
 
-def setup_wandb(ctx: TrainConfig):
+def setup_wandb(ctx: EvaluationConfig):
     wandb.init(
         project=ctx.wandb.project,
         name=generate_wandb_run_name(ctx),
@@ -51,10 +52,10 @@ def setup_wandb(ctx: TrainConfig):
     )
 
 
-def setup_tokenizer(ctx: TrainConfig, model: Optional[AutoModelForSeq2SeqLM],
+def setup_tokenizer(ctx: EvaluationConfig, model: Optional[AutoModelForSeq2SeqLM],
         train_ds: Optional[Dataset], eval_ds: Optional[Dataset],
-        train_ds_def: Optional[DatasetFeatureConfig] = None,
-        eval_ds_def: Optional[DatasetFeatureConfig] = None
+        train_ds_def: Optional[DatasetConfig] = None,
+        eval_ds_def: Optional[DatasetConfig] = None
 ) -> AutoTokenizer:
     languages = set()
 
@@ -69,7 +70,7 @@ def setup_tokenizer(ctx: TrainConfig, model: Optional[AutoModelForSeq2SeqLM],
     return tokenizer
 
 
-def setup_model(ctx: TrainConfig, model_checkpoint: Optional[Path], attn: Optional[str] = None) -> AutoModelForSeq2SeqLM:
+def setup_model(ctx: EvaluationConfig, model_checkpoint: Optional[Path], attn: Optional[str] = None) -> AutoModelForSeq2SeqLM:
     if attn is None:
         return AutoModelForSeq2SeqLM.from_pretrained(
             ctx.model.model_name if model_checkpoint is None else str(model_checkpoint),

@@ -1,14 +1,15 @@
 import os
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 from datasets import Dataset
 import torch
 from tqdm import tqdm
 
-from config import generate_argparse, load_configs, TrainConfig, CoreDatasetConfig, DatasetFeatureConfig
-from dataset_loading import load_existing_dataset, load_hf_dataset, validate_preprocessed_dataset
-from setup import setup_logging, setup_tokenizer
+from config import DatasetConfig, EvaluationConfig, generate_argparse, load_configs
+from dataset_loading import load_saved_dataset, validate_preprocessed_dataset
+from setup import setup_logging
 from train_t5 import generate_trainer
 
 
@@ -41,9 +42,19 @@ def generate_predictions(trainer, tokenizer, tds, batch_size=8):
     return preds
 
 
+def sanitize_dataset_name(name: str) -> str:
+    return name.replace("/", "_").replace("\\", "_").replace(" ", "_")
+
+
+def build_prediction_path(ctx: EvaluationConfig, ds_def: DatasetConfig) -> Path:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{timestamp}_{sanitize_dataset_name(ds_def.name)}_predictions.txt"
+    return ctx.results_prefix / filename
+
+
 def evaluate_dataset(
-        ctx: TrainConfig,
-        ds_def: DatasetFeatureConfig,
+        ctx: EvaluationConfig,
+        ds_def: DatasetConfig,
         ds: Dataset,
         checkpoint: Path,
 ) -> Dict[str, float]:
@@ -51,13 +62,12 @@ def evaluate_dataset(
     processed_ds = ds
     trainer, tokenizer = generate_trainer(ctx, None, processed_ds, None, ds_def, checkpoint)
 
-    if ds_def.prediction_file is not None:
-        decoded_predictions = generate_predictions(trainer, tokenizer, processed_ds)
-        result_fname = ctx.evaluation.results_prefix / ds_def.prediction_file
-        result_fname.parent.mkdir(parents=True, exist_ok=True)
-        lines = '\n'.join(decoded_predictions)
-        with open(result_fname, 'w+') as f:
-            f.write(lines)
+    decoded_predictions = generate_predictions(trainer, tokenizer, processed_ds)
+    result_fname = build_prediction_path(ctx, ds_def)
+    result_fname.parent.mkdir(parents=True, exist_ok=True)
+    lines = '\n'.join(decoded_predictions)
+    with open(result_fname, 'w+') as f:
+        f.write(lines)
     return trainer.evaluate()
 
 
@@ -66,25 +76,16 @@ def main():
     ag = ap.add_argument_group('evaluation')
     ag.add_argument('--checkpoint', type=str, required=True, help='The checkpoint to be evaluated.')
     args = ap.parse_args()
-    conf = load_configs(args.configs, args.default_config)
+    conf = load_configs(args.configs, args.default_config, schema=EvaluationConfig)
 
     setup_logging()
 
     if conf.cpus < 0:
         conf.cpus = os.cpu_count()
 
-    if conf.evaluation.datasets is None:
-        _, _, ds, ds_def = load_existing_dataset(conf)
-        print(evaluate_dataset(conf, ds_def, ds, args.checkpoint))
-        return
-
-    for ds_def in conf.evaluation.datasets:
-        ds = load_hf_dataset(ds_def, conf.dataset.hf_cache, False)
-        if ds_def.subset is None:
-            print(f"{ds_def.name}({ds_def.split})")
-        else:
-            print(f"{ds_def.name}:{ds_def.subset}({ds_def.split})")
-        print(evaluate_dataset(conf, ds_def, ds, args.checkpoint))
+    ds_def = conf.evaluation_dataset
+    ds = load_saved_dataset(ds_def)
+    print(evaluate_dataset(conf, ds_def, ds, args.checkpoint))
 
 
 if __name__ == "__main__":
