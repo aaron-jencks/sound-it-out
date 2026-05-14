@@ -10,13 +10,10 @@ import unicodedata
 from datasets import load_dataset
 
 from phonemizer.backend import EspeakBackend
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[4]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-from custom_espeak import CustomEspeakBackend
+from phonemizer.custom_espeak import CustomEspeakBackend
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("ipa_romanize")
+logger = logging.getLogger(__file__)
 logging.getLogger("phonemizer").setLevel(logging.ERROR)
 
 MASSIVE_LANGS = {
