@@ -1,0 +1,43 @@
+@startuml
+class DatasetFeatureConfig {
++ input_feature : str
++ output_feature : str
++ language_feature : Optional[str]
+}
+
+class DatasetConfig {
++ name : str
++ split : str
++ subset : Optional[str]
++ languages : List[str]
++ language_map : Dict[str, str]
+}
+
+DatasetFeatureConfig <|-- DatasetConfig
+
+class SplitConfig {
++ eval_ratio : float
++ max_eval_size : int
+}
+
+class ConstructedDatasetConfig {
++ output_dataset : DatasetFeatureConfig
++ input_datasets : List[Datasetconfig]
++ samples : int
++ shuffle_buffer : int
++ hf_cache : Path
++ splits : SplitConfig
+}
+
+DatasetFeatureConfig -> ConstructedDatasetConfig::output_dataset
+DatasetConfig -> ConstructedDatasetConfig::input_datasets
+SplitConfig -> ConstructedDatasetConfig::splits
+
+class RunConfig {
++ construction : ConstructedDatasetConfig
++ evaluation : DatasetConfig
+}
+
+DatasetConfig -> RunConfig::evaluation
+ConstructedDatasetConfig -> RunConfig::construction
+@enduml
