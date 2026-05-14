@@ -12,7 +12,7 @@ from transformers.utils import is_flash_attn_2_available
 import wandb
 
 from config import TrainConfig, DatasetFeatureConfig
-from dataset import load_existing_dataset
+from dataset_loading import load_existing_dataset
 from setup import setup_wandb, parse_args, setup_model, setup_tokenizer
 
 

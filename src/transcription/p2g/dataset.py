@@ -12,8 +12,8 @@ from datasets import load_dataset, IterableDataset, Dataset, load_from_disk, Cla
 from pydantic import ValidationError
 from transformers import PreTrainedTokenizer, set_seed
 
-from common import format_language_marker
 from config import TrainConfig, CoreDatasetConfig, NamedSplitDatasetFeatureConfig, ConstructedDatasetConfig, TokenizerConfig
+from dataset_loading import prepare_datasets
 from setup import parse_args, setup_tokenizer
 
 
@@ -218,43 +218,6 @@ def assign_new_dataset_timestamp(ctx: TrainConfig) -> Tuple[datetime, Path]:
     return get_dataset_path(ctx)
 
 
-def prepare_datasets(
-        ctx: TrainConfig,
-        train_ds: Dataset, train_ds_ctx: NamedSplitDatasetFeatureConfig,
-        eval_ds: Dataset, eval_ds_ctx: NamedSplitDatasetFeatureConfig
-) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
-    tokenizer = setup_tokenizer(ctx, None, train_ds, eval_ds, train_ds_ctx, eval_ds_ctx)
-    logger.info("preprocessing train split")
-    train_ds = preprocess_dataset(ctx, train_ds_ctx, train_ds, tokenizer)
-    logger.info("preprocessing eval split")
-    eval_ds = preprocess_dataset(ctx, eval_ds_ctx, eval_ds, tokenizer)
-    return train_ds, train_ds_ctx, eval_ds, eval_ds_ctx
-
-
-def load_existing_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
-    if ctx.dataset.last_date is None:
-        raise RuntimeError("dataset.last_date must be set when loading an existing dataset artifact")
-
-    _, output_path_name = get_dataset_path(ctx)
-    if not output_path_name.exists():
-        raise FileNotFoundError(f"dataset artifact does not exist: {output_path_name}")
-
-    meta = load_metadata(output_path_name)
-    if meta is None:
-        raise RuntimeError(f"dataset metadata was missing or unreadable: {output_path_name / 'custom_metadata.json'}")
-    if meta != ctx.dataset:
-        raise RuntimeError(f"dataset metadata did not match current config: {output_path_name}")
-    tokenizer_meta = load_tokenizer_metadata(output_path_name)
-    if tokenizer_meta is None:
-        raise RuntimeError(f"tokenizer metadata was missing or unreadable: {output_path_name / 'tokenizer_metadata.json'}")
-    if tokenizer_meta != ctx.model.tokenizer:
-        raise RuntimeError(f"tokenizer metadata did not match current config: {output_path_name}")
-
-    output_ds = load_from_disk(str(output_path_name))
-    train_ds, train_ds_ctx, eval_ds, eval_ds_ctx = split_or_load_eval_dataset(ctx, output_ds)
-    return prepare_datasets(ctx, train_ds, train_ds_ctx, eval_ds, eval_ds_ctx)
-
-
 def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureConfig, Dataset, NamedSplitDatasetFeatureConfig]:
     logger.info("creating dataset")
 
@@ -416,48 +379,6 @@ def create_dataset(ctx: TrainConfig) -> Tuple[Dataset, NamedSplitDatasetFeatureC
     store_tokenizer_metadata(output_path_name, ctx.model.tokenizer)
     train_ds, train_ds_ctx, eval_ds, eval_ds_ctx = split_or_load_eval_dataset(ctx, output_ds, force=True)
     return prepare_datasets(ctx, train_ds, train_ds_ctx, eval_ds, eval_ds_ctx)
-
-
-def preprocess_dataset(
-        ctx: TrainConfig, ds_ctx: NamedSplitDatasetFeatureConfig,
-        ds: Dataset, tokenizer: PreTrainedTokenizer
-) -> Dataset:
-    def preprocess_function(examples):
-        inputs = [
-            f"{format_language_marker(ds_ctx.language_map[lang])} {text}"
-            for lang, text in zip(examples[ds_ctx.language_feature], examples[ds_ctx.input_feature])
-        ]
-
-        model_inputs = tokenizer(
-            inputs,
-            truncation=True,
-            max_length=ctx.model.tokenizer.max_sequence_length,
-        )
-
-        outputs = [
-            f"{format_language_marker(ds_ctx.language_map[lang])} {text}"
-            for lang, text in zip(examples[ds_ctx.language_feature], examples[ds_ctx.output_feature])
-        ]
-
-        labels = tokenizer(
-            outputs,
-            truncation=True,
-            max_length=ctx.model.tokenizer.max_sequence_length,
-        )
-
-        model_inputs["labels"] = labels["input_ids"]
-        return model_inputs
-
-    cache_file = ctx.dataset.hf_cache / ds_ctx.name / f"{ds_ctx.split}_tokens.arrow"
-
-    return ds.map(
-        preprocess_function,
-        batched=True,
-        remove_columns=ds.column_names,
-        num_proc=ctx.cpus,
-        cache_file_name=str(cache_file)
-    )
-
 
 if __name__ == "__main__":
     config = parse_args("generates the dataset necessary for training")
