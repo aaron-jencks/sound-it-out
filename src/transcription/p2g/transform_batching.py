@@ -20,6 +20,9 @@ class LanguageBatchCollector:
     def add(self, language: str, text: str) -> None:
         self._buffers[language].append(text)
 
+    def count(self, language: str) -> int:
+        return len(self._buffers.get(language, []))
+
     def should_flush(self, language: str, remaining_quota: int) -> bool:
         current = len(self._buffers.get(language, []))
         if current == 0:

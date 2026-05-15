@@ -2,6 +2,7 @@ from collections import Counter
 from datetime import datetime
 import logging
 from pathlib import Path
+import time
 from typing import Optional, Tuple
 
 from datasets import Dataset, DatasetDict
@@ -90,6 +91,13 @@ def split_dataset(ctx: PreprocessingConfig, ds: Dataset) -> DatasetDict:
     )
 
 
+def format_duration(seconds: float) -> str:
+    total_seconds = max(0, int(seconds))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+
 def create_dataset(ctx: PreprocessingConfig) -> Path:
     logger.info("creating dataset")
     if ctx.output_dataset.language_feature is None:
@@ -116,14 +124,32 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
     phonemizer_failure_counts = Counter()
 
     documents = 0
-    samples = 0
+    processed_samples = 0
+    start_time = time.monotonic()
+
+    def log_progress() -> None:
+        elapsed_seconds = time.monotonic() - start_time
+        base = (
+            f"processed {documents} documents and found {processed_samples}/{total_samples} samples, "
+            f"elapsed time {format_duration(elapsed_seconds)} "
+        )
+        if processed_samples == 0:
+            logger.info(f"{base}estimated remaining time unknown")
+            return
+
+        remaining_samples = total_samples - processed_samples
+        estimated_remaining_seconds = elapsed_seconds * remaining_samples / processed_samples
+        logger.info(
+            f"{base}estimated remaining time {format_duration(estimated_remaining_seconds)}"
+        )
 
     def check_language_status():
         for language in languages:
             if language_counts[language] < ctx.samples:
                 logger.info(
                     f"language {language} is waiting for {ctx.samples - language_counts[language]} samples "
-                    f"(seen_docs={language_documents_seen[language]}, "
+                    f"(buff_count={batch_collector.count(language)}, "
+                    f"seen_docs={language_documents_seen[language]}, "
                     f"skipped_docs={language_documents_skipped[language]}, "
                     f"short_docs={language_short_documents[language]})"
                 )
@@ -132,7 +158,7 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
         return all(language_counts.get(language, 0) >= ctx.samples for language in dataset_languages)
 
     def flush_language(language: str, texts: Optional[list[str]] = None) -> None:
-        nonlocal samples
+        nonlocal processed_samples
         if texts is None:
             texts = batch_collector.pop(language)
         if not texts:
@@ -150,7 +176,7 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
             final_dataset[ctx.output_dataset.output_feature].append(text)
             final_dataset[ctx.output_dataset.language_feature].append(language)
             language_counts[language] += 1
-            samples += 1
+            processed_samples += 1
 
     def flush_languages(languages_to_flush: list[str]) -> None:
         for language, texts in batch_collector.pop_all(languages_to_flush):
@@ -160,7 +186,7 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
         for definition in ctx.input_datasets:
             dataset_target_languages = [resolve_language(definition, language) for language in definition.languages]
             logger.info(f"processing dataset: {definition.name}")
-            logger.info(f"processed {documents} documents and found {samples}/{total_samples} samples")
+            log_progress()
             check_language_status()
 
             if dataset_languages_full(dataset_target_languages):
@@ -174,7 +200,7 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
 
             for document in ds:
                 if documents % 10000 == 0:
-                    logger.info(f"processed {documents} documents and found {samples}/{total_samples} samples")
+                    log_progress()
                     observed_languages = sum(1 for count in language_documents_seen.values() if count > 0)
                     logger.info(f"there are {observed_languages}/{len(languages)} target languages observed so far")
                     logger.info(f"raw language counts seen so far: {dict(raw_language_counts)}")
@@ -227,7 +253,7 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
         if phonemizer_supervisor is not None:
             phonemizer_supervisor.close()
 
-    logger.info(f"processed {documents} documents and found {samples}/{total_samples} samples")
+    log_progress()
     logger.info(f"final raw language counts seen: {dict(raw_language_counts)}")
     if phonemizer_failure_counts:
         logger.info(f"final transform failure counts: {dict(phonemizer_failure_counts)}")
