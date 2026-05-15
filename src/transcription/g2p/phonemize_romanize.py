@@ -2,15 +2,13 @@
 import argparse
 import logging
 import os
-import pathlib
 import subprocess
-import sys
 import unicodedata
 
 from datasets import load_dataset
 
 from phonemizer.backend import EspeakBackend
-from phonemizer.custom_espeak import CustomEspeakBackend
+from .custom_espeak import CustomEspeakBackend
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__file__)
