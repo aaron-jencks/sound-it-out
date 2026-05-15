@@ -1,0 +1,38 @@
+{
+  "tokenizer": {
+    "max_sequence_length": 512
+  },
+  "output_dataset": {
+    "name": "preprocessed_ipa_dataset",
+    "input_feature": "romanized",
+    "output_feature": "text",
+    "language_feature": "language"
+  },
+  "transform": {
+    "type": "romanize"
+  },
+  "input_datasets": [
+    {
+      "name": "mugezhang/8lang_multirepr_pretrain_interleaved",
+      "split": "train",
+      "output_feature": "text",
+      "language_feature": "language",
+      "languages": [
+        "eng", "spa",
+        "rus", "pol",
+        "hin", "urd",
+        "mal", "tam"
+      ],
+      "language_map": {
+        "eng": "en-us",
+        "spa": "es",
+        "rus": "ru",
+        "pol": "pl",
+        "hin": "hi",
+        "urd": "ur",
+        "mal": "ml",
+        "tam": "ta"
+      }
+    }
+  ]
+}
