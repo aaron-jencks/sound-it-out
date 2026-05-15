@@ -4,10 +4,10 @@
 #SBATCH --output=/fs/ess/PAS2836/ipa_gpt/jobs/logs/%x-%j.out
 #SBATCH --error=/fs/ess/PAS2836/ipa_gpt/jobs/logs/errors/%x-%j.err
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=48
+#SBATCH --ntasks-per-node=96
 #SBATCH --time=12:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --partition=cpu-exp
+#SBATCH --partition=cpu
 
 module load miniconda3/24.1.2-py310 cuda/13.2.1
 source "$(conda info --base)/etc/profile.d/conda.sh"
