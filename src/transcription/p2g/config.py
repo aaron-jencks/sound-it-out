@@ -90,6 +90,7 @@ class PreprocessingConfig(CoreConfig):
     transform: TransformationConfig
     samples: int
     shuffle_buffer: int
+    transform_batch_size: int
     hf_cache: Path
     splits: SplitRatioConfig
 
