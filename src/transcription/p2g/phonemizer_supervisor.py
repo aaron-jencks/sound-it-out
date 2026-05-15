@@ -3,12 +3,14 @@ import multiprocessing as mp
 from pathlib import Path
 import queue
 import time
+from collections import Counter
 from typing import Optional
 
 
 logger = logging.getLogger(__name__)
 
-_REQUEST_JOB = "job"
+_REQUEST_SINGLE = "single"
+_REQUEST_BATCH = "batch"
 _REQUEST_STOP = "stop"
 _STATUS_OK = "ok"
 _STATUS_TRANSFORM_ERROR = "transform_error"
@@ -33,22 +35,39 @@ def _phonemizer_child_main(
 
     while True:
         message = input_queue.get()
-        message_type = message[0]
-        if message_type == _REQUEST_STOP:
+        request_type = message[0]
+        if request_type == _REQUEST_STOP:
             return
 
-        _, request_id, text, language = message
+        _, request_id, payload, language = message
         try:
-            result = phonemize_romanize.strip_ipa(
-                phonemize_romanize.phonemize_batch([text], language)[0]
-            )
+            if request_type == _REQUEST_SINGLE:
+                result = phonemize_romanize.strip_ipa(
+                    phonemize_romanize.phonemize_batch([payload], language)[0]
+                )
+            elif request_type == _REQUEST_BATCH:
+                result = [
+                    phonemize_romanize.strip_ipa(item)
+                    for item in phonemize_romanize.phonemize_batch(payload, language)
+                ]
+            else:
+                raise ValueError(f"unsupported request type: {request_type}")
             output_queue.put((_STATUS_OK, request_id, result))
         except Exception as exc:
-            output_queue.put((
-                _STATUS_TRANSFORM_ERROR,
-                request_id,
-                f"{type(exc).__name__}: {exc}",
-            ))
+            output_queue.put((_STATUS_TRANSFORM_ERROR, request_id, f"{type(exc).__name__}: {exc}"))
+
+
+def _close_queue(work_queue: Optional[mp.Queue]) -> None:
+    if work_queue is None:
+        return
+    try:
+        work_queue.close()
+    except Exception:
+        pass
+    try:
+        work_queue.join_thread()
+    except Exception:
+        pass
 
 
 def _stop_process(process: Optional[mp.Process], stop_queue: Optional[mp.Queue]) -> None:
@@ -66,15 +85,7 @@ def _stop_process(process: Optional[mp.Process], stop_queue: Optional[mp.Queue])
         process.kill()
         process.join(timeout=1.0)
 
-    if stop_queue is not None:
-        try:
-            stop_queue.close()
-        except Exception:
-            pass
-        try:
-            stop_queue.join_thread()
-        except Exception:
-            pass
+    _close_queue(stop_queue)
 
 
 def _start_child_process(
@@ -107,7 +118,55 @@ def _monitor_main(
     def restart_child() -> None:
         nonlocal child_process, child_input_queue, child_output_queue
         _stop_process(child_process, child_input_queue)
+        _close_queue(child_output_queue)
         child_process, child_input_queue, child_output_queue = _start_child_process(ctx, espeak_path)
+
+    def dispatch_to_child(request_type: str, request_id: int, payload: str | list[str], language: str):
+        if child_process is None or not child_process.is_alive():
+            response_queue.put((
+                _STATUS_CHILD_CRASH,
+                request_id,
+                f"child exited before request started (exitcode={None if child_process is None else child_process.exitcode})",
+            ))
+            restart_child()
+            return
+
+        child_input_queue.put((request_type, request_id, payload, language))
+        deadline = time.monotonic() + timeout_seconds
+
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                response_queue.put((_STATUS_TIMEOUT, request_id, f"child timed out after {timeout_seconds}s"))
+                restart_child()
+                return
+
+            if not child_process.is_alive():
+                response_queue.put((
+                    _STATUS_CHILD_CRASH,
+                    request_id,
+                    f"child exited with code {child_process.exitcode}",
+                ))
+                restart_child()
+                return
+
+            try:
+                child_response = child_output_queue.get(timeout=min(_POLL_INTERVAL_SECONDS, remaining))
+            except queue.Empty:
+                continue
+
+            child_status, child_request_id, response_payload = child_response
+            if child_request_id != request_id:
+                response_queue.put((
+                    _STATUS_MONITOR_ERROR,
+                    request_id,
+                    f"unexpected child response id {child_request_id} while waiting for {request_id}",
+                ))
+                restart_child()
+                return
+
+            response_queue.put((child_status, child_request_id, response_payload))
+            return
 
     restart_child()
 
@@ -118,59 +177,11 @@ def _monitor_main(
             if request_type == _REQUEST_STOP:
                 return
 
-            _, request_id, text, language = request
-
-            if child_process is None or not child_process.is_alive():
-                response_queue.put((
-                    _STATUS_CHILD_CRASH,
-                    request_id,
-                    f"child exited before request started (exitcode={None if child_process is None else child_process.exitcode})",
-                ))
-                restart_child()
-                continue
-
-            child_input_queue.put((_REQUEST_JOB, request_id, text, language))
-            deadline = time.monotonic() + timeout_seconds
-
-            while True:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    response_queue.put((
-                        _STATUS_TIMEOUT,
-                        request_id,
-                        f"child timed out after {timeout_seconds}s",
-                    ))
-                    restart_child()
-                    break
-
-                if not child_process.is_alive():
-                    response_queue.put((
-                        _STATUS_CHILD_CRASH,
-                        request_id,
-                        f"child exited with code {child_process.exitcode}",
-                    ))
-                    restart_child()
-                    break
-
-                try:
-                    child_response = child_output_queue.get(timeout=min(_POLL_INTERVAL_SECONDS, remaining))
-                except queue.Empty:
-                    continue
-
-                child_status, child_request_id, payload = child_response
-                if child_request_id != request_id:
-                    response_queue.put((
-                        _STATUS_MONITOR_ERROR,
-                        request_id,
-                        f"unexpected child response id {child_request_id} while waiting for {request_id}",
-                    ))
-                    restart_child()
-                    break
-
-                response_queue.put((child_status, child_request_id, payload))
-                break
+            _, request_id, payload, language = request
+            dispatch_to_child(request_type, request_id, payload, language)
     finally:
         _stop_process(child_process, child_input_queue)
+        _close_queue(child_output_queue)
 
 
 class PhonemizerSupervisor:
@@ -184,6 +195,10 @@ class PhonemizerSupervisor:
         self._monitor_process: Optional[mp.Process] = None
         self.last_failure_kind: Optional[str] = None
         self.last_failure_detail: Optional[str] = None
+        self.last_batch_failure_kind: Optional[str] = None
+        self.last_batch_failure_detail: Optional[str] = None
+        self.last_batch_used_fallback = False
+        self.last_item_failure_counts: Counter[str] = Counter()
         self._start_monitor()
 
     def _start_monitor(self) -> None:
@@ -201,38 +216,31 @@ class PhonemizerSupervisor:
         self.close()
         self._start_monitor()
 
-    def transcribe(self, text: str, language: str) -> Optional[str]:
+    def _submit(self, request_type: str, payload: str | list[str], language: str) -> tuple[bool, str | list[str], str, str]:
         if self._request_queue is None or self._response_queue is None or self._monitor_process is None:
             raise RuntimeError("phonemizer supervisor has not been started")
 
-        self.last_failure_kind = None
-        self.last_failure_detail = None
-
         request_id = self._request_id
         self._request_id += 1
-        self._request_queue.put((_REQUEST_JOB, request_id, text, language))
+        self._request_queue.put((request_type, request_id, payload, language))
         deadline = time.monotonic() + self._timeout_seconds + _RESULT_GRACE_SECONDS
 
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                self.last_failure_kind = _STATUS_MONITOR_EXIT
-                self.last_failure_detail = "monitor did not respond before the grace deadline"
+                detail = "monitor did not respond before the grace deadline"
                 logger.warning("phonemizer monitor became unresponsive; restarting")
                 self._restart_monitor()
-                return None
+                return False, payload if request_type == _REQUEST_BATCH else "", _STATUS_MONITOR_EXIT, detail
 
             if not self._monitor_process.is_alive():
-                self.last_failure_kind = _STATUS_MONITOR_EXIT
-                self.last_failure_detail = f"monitor exited with code {self._monitor_process.exitcode}"
+                detail = f"monitor exited with code {self._monitor_process.exitcode}"
                 logger.warning("phonemizer monitor exited unexpectedly; restarting")
                 self._restart_monitor()
-                return None
+                return False, payload if request_type == _REQUEST_BATCH else "", _STATUS_MONITOR_EXIT, detail
 
             try:
-                status, response_id, payload = self._response_queue.get(
-                    timeout=min(_POLL_INTERVAL_SECONDS, remaining)
-                )
+                status, response_id, response_payload = self._response_queue.get(timeout=min(_POLL_INTERVAL_SECONDS, remaining))
             except queue.Empty:
                 continue
 
@@ -241,27 +249,47 @@ class PhonemizerSupervisor:
                     f"received mismatched phonemizer response id {response_id}, expected {request_id}"
                 )
 
-            if status == _STATUS_OK:
-                return payload
+            return status == _STATUS_OK, response_payload, status, "" if status == _STATUS_OK else str(response_payload)
 
-            self.last_failure_kind = status
-            self.last_failure_detail = payload
-            return None
+    def transcribe(self, text: str, language: str) -> Optional[str]:
+        self.last_failure_kind = None
+        self.last_failure_detail = None
+        success, payload, status, detail = self._submit(_REQUEST_SINGLE, text, language)
+        if success:
+            return payload  # type: ignore[return-value]
+        self.last_failure_kind = status
+        self.last_failure_detail = detail
+        return None
+
+    def transcribe_batch(self, texts: list[str], language: str) -> list[Optional[str]]:
+        self.last_batch_failure_kind = None
+        self.last_batch_failure_detail = None
+        self.last_batch_used_fallback = False
+        self.last_item_failure_counts = Counter()
+
+        success, payload, status, detail = self._submit(_REQUEST_BATCH, texts, language)
+        if success:
+            return payload  # type: ignore[return-value]
+
+        self.last_batch_failure_kind = status
+        self.last_batch_failure_detail = detail
+        self.last_batch_used_fallback = True
+
+        outputs: list[Optional[str]] = []
+        for text in texts:
+            result = self.transcribe(text, language)
+            outputs.append(result)
+            if result is None:
+                failure_kind = self.last_failure_kind or "unknown_failure"
+                self.last_item_failure_counts[failure_kind] += 1
+        return outputs
 
     def close(self) -> None:
         if self._monitor_process is None:
             return
 
         _stop_process(self._monitor_process, self._request_queue)
-        if self._response_queue is not None:
-            try:
-                self._response_queue.close()
-            except Exception:
-                pass
-            try:
-                self._response_queue.join_thread()
-            except Exception:
-                pass
+        _close_queue(self._response_queue)
         self._monitor_process = None
         self._request_queue = None
         self._response_queue = None
