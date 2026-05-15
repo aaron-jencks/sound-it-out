@@ -1,0 +1,6 @@
+{
+        "dataset": {
+                "hf_cache": "fs/scratch/PAS2836/ipa_gpt/cache"
+        },
+        "cpus": 46
+}
