@@ -9,7 +9,10 @@
     "language_feature": "language"
   },
   "transform": {
-    "type": "romanize"
+    "type": "romanize",
+    "romanization": {
+      "uroman_path": "/fs/ess/PAS2836/ipa_gpt/github/uroman/uroman/uroman.pl"
+    }
   },
   "input_datasets": [
     {
