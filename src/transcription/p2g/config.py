@@ -52,7 +52,7 @@ class DatasetConfig(DatasetMetaConfig, FullDatasetFeatureConfig):
 
 
 class ConstructionInputDatasetConfig(DatasetMetaConfig, PartialDatasetFeatureConfig):
-    pass
+    streaming: bool = True
 
 
 class RomanizationConfig(BaseModel):

@@ -193,10 +193,18 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
                 logger.info("all languages in dataset are full, moving on...")
                 continue
 
-            ds = load_hf_dataset(definition, streaming=True, cache_loc=ctx.hf_cache).shuffle(
-                seed=ctx.random_seed,
-                buffer_size=ctx.shuffle_buffer,
+            ds = load_hf_dataset(
+                definition,
+                streaming=definition.streaming,
+                cache_loc=ctx.hf_cache,
             )
+            if definition.streaming:
+                ds = ds.shuffle(
+                    seed=ctx.random_seed,
+                    buffer_size=ctx.shuffle_buffer,
+                )
+            else:
+                ds = ds.shuffle(seed=ctx.random_seed)
 
             for document in ds:
                 if documents % 10000 == 0:

@@ -15,6 +15,7 @@
     {
       "name": "mugezhang/8lang_multirepr_pretrain_interleaved",
       "split": "train",
+      "streaming": false,
       "output_feature": "text",
       "language_feature": "language",
       "languages": [
