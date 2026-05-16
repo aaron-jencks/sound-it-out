@@ -23,7 +23,12 @@ datasets_prefix="$storage_prefix/datasets"
 checkpoints_prefix="$scratch_prefix/checkpoints"
 scratch_datasets_prefix="$scratch_prefix/datasets"
 scratch_github_prefix="$scratch_prefix/github"
-mkdir -pv $scratch_datasets_prefix $scratch_github_prefix $checkpoints_prefix
+cache_dir="$scratch_prefix/cache"
+mkdir -pv $scratch_datasets_prefix $scratch_github_prefix $checkpoints_prefix $cache_dir
+
+export HF_HOME="$cache_dir"
+export HF_HUB_CACHE="$cache_dir/hub"
+export HF_DATASETS_CACHE="$cache_dir/datasets"
 
 cd "$scratch_github_prefix/sound-it-out"
 echo "copying local config to dir"
