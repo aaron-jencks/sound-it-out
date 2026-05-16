@@ -14,8 +14,11 @@ case "${MODE}" in
   roman)
     MODE_CONFIG="transcription/p2g/config/roman_pre.json"
     ;;
+  debug)
+    MODE_CONFIG="transcription/p2g/config/debug_ipa_pre.json"
+    ;;
   *)
-    echo "usage: $(basename "$0") [ipa|roman]" >&2
+    echo "usage: $(basename "$0") [ipa|roman|debug]" >&2
     exit 1
     ;;
 esac
