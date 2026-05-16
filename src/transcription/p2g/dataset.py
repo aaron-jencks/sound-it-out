@@ -10,12 +10,12 @@ from transformers import set_seed
 
 from transcription.p2g.config import ConstructionInputDatasetConfig, PreprocessingConfig
 from transcription.p2g.dataset_loading import load_hf_dataset
-from transcription.p2g.phonemizer_supervisor import PhonemizerSupervisor
 from transcription.p2g.setup import parse_args
-from transcription.p2g.transform_batching import (
-    LanguageBatchCollector,
-    PhonemizeBatchRunner,
-    RomanizeBatchRunner,
+from transcription.p2g.transform_batching import LanguageBatchCollector
+from transcription.p2g.transform_pool import (
+    CompletedTransformBatch,
+    QueuedTransformBatch,
+    TransformPoolSupervisor,
 )
 
 
@@ -66,18 +66,25 @@ def extract_word_chunk(text: str, words_per_sample: int) -> Tuple[str, bool]:
     return " ".join(words[:words_per_sample]), short_document
 
 
-def build_transform_runner(ctx: PreprocessingConfig) -> tuple[PhonemizeBatchRunner | RomanizeBatchRunner, Optional[PhonemizerSupervisor]]:
+def build_transform_pool(ctx: PreprocessingConfig) -> TransformPoolSupervisor:
     if ctx.transform.type == "phonemize":
-        supervisor = PhonemizerSupervisor(ctx.transform.espeak_path, timeout_seconds=30)
-        return PhonemizeBatchRunner(supervisor), supervisor
+        return TransformPoolSupervisor(
+            transform_type="phonemize",
+            worker_count=ctx.cpus,
+            timeout_seconds=30,
+            espeak_path=ctx.transform.espeak_path,
+        )
 
     if ctx.transform.type == "romanize":
         if ctx.transform.romanization is None:
             raise ValueError("romanization config is required when transform.type is 'romanize'")
-        return RomanizeBatchRunner(
-            ctx.transform.romanization.uroman_path,
-            ctx.transform.romanization.perl_path,
-        ), None
+        return TransformPoolSupervisor(
+            transform_type="romanize",
+            worker_count=ctx.cpus,
+            timeout_seconds=30,
+            uroman_path=ctx.transform.romanization.uroman_path,
+            perl_path=ctx.transform.romanization.perl_path,
+        )
 
     raise ValueError(f"unsupported transform type: {ctx.transform.type}")
 
@@ -106,7 +113,7 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
     logger.info(f"building dataset artifact for timestamp {output_dt.isoformat()}")
     logger.info(f"dataset will be written to {output_path_name}")
 
-    transform_runner, phonemizer_supervisor = build_transform_runner(ctx)
+    transform_pool = build_transform_pool(ctx)
     batch_collector = LanguageBatchCollector(ctx.transform_batch_size)
     languages = target_languages(ctx)
     total_samples = len(languages) * ctx.samples
@@ -117,11 +124,12 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
         ctx.output_dataset.language_feature: [],
     }
     language_counts = {language: 0 for language in languages}
+    language_inflight_counts = {language: 0 for language in languages}
     language_documents_seen = {language: 0 for language in languages}
     language_documents_skipped = {language: 0 for language in languages}
     language_short_documents = {language: 0 for language in languages}
     raw_language_counts = Counter()
-    phonemizer_failure_counts = Counter()
+    transform_failure_counts = Counter()
 
     documents = 0
     processed_samples = 0
@@ -149,6 +157,7 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
                 logger.info(
                     f"language {language} is waiting for {ctx.samples - language_counts[language]} samples "
                     f"(buff_count={batch_collector.count(language)}, "
+                    f"inflight_count={language_inflight_counts[language]}, "
                     f"seen_docs={language_documents_seen[language]}, "
                     f"skipped_docs={language_documents_skipped[language]}, "
                     f"short_docs={language_short_documents[language]})"
@@ -157,30 +166,47 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
     def dataset_languages_full(dataset_languages: list[str]) -> bool:
         return all(language_counts.get(language, 0) >= ctx.samples for language in dataset_languages)
 
-    def flush_language(language: str, texts: Optional[list[str]] = None) -> None:
+    def effective_language_count(language: str) -> int:
+        return language_counts[language] + language_inflight_counts[language]
+
+    def merge_completed_batches(completed_batches: list[CompletedTransformBatch]) -> None:
         nonlocal processed_samples
+
+        for batch in completed_batches:
+            language_inflight_counts[batch.language] -= len(batch.texts)
+            transform_failure_counts.update(batch.event_counts)
+
+            for text, transformed_text in zip(batch.texts, batch.outputs):
+                if transformed_text is None:
+                    language_documents_skipped[batch.language] += 1
+                    continue
+
+                final_dataset[ctx.output_dataset.input_feature].append(transformed_text)
+                final_dataset[ctx.output_dataset.output_feature].append(text)
+                final_dataset[ctx.output_dataset.language_feature].append(batch.language)
+                language_counts[batch.language] += 1
+                processed_samples += 1
+
+    def flush_language(language: str, texts: Optional[list[str]] = None) -> None:
         if texts is None:
             texts = batch_collector.pop(language)
         if not texts:
             return
 
-        result = transform_runner.run_batch(texts, language)
-        phonemizer_failure_counts.update(result.event_counts)
-
-        for text, transformed_text in zip(texts, result.outputs):
-            if transformed_text is None:
-                language_documents_skipped[language] += 1
-                continue
-
-            final_dataset[ctx.output_dataset.input_feature].append(transformed_text)
-            final_dataset[ctx.output_dataset.output_feature].append(text)
-            final_dataset[ctx.output_dataset.language_feature].append(language)
-            language_counts[language] += 1
-            processed_samples += 1
+        language_inflight_counts[language] += len(texts)
+        completed_batches = transform_pool.pump(QueuedTransformBatch(language=language, texts=texts))
+        merge_completed_batches(completed_batches)
 
     def flush_languages(languages_to_flush: list[str]) -> None:
         for language, texts in batch_collector.pop_all(languages_to_flush):
             flush_language(language, texts)
+
+    def drain_completed_batches() -> None:
+        merge_completed_batches(transform_pool.pump())
+
+    def drain_all_inflight_batches() -> None:
+        while transform_pool.has_inflight_batches():
+            merge_completed_batches(transform_pool.wait_for_completion())
 
     try:
         for definition in ctx.input_datasets:
@@ -207,13 +233,14 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
                 ds = ds.shuffle(seed=ctx.random_seed)
 
             for document in ds:
+                drain_completed_batches()
                 if documents % 10000 == 0:
                     log_progress()
                     observed_languages = sum(1 for count in language_documents_seen.values() if count > 0)
                     logger.info(f"there are {observed_languages}/{len(languages)} target languages observed so far")
                     logger.info(f"raw language counts seen so far: {dict(raw_language_counts)}")
-                    if phonemizer_failure_counts:
-                        logger.info(f"transform failures so far: {dict(phonemizer_failure_counts)}")
+                    if transform_failure_counts:
+                        logger.info(f"transform failures so far: {dict(transform_failure_counts)}")
                     check_language_status()
 
                 if dataset_languages_full(dataset_target_languages):
@@ -229,7 +256,7 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
                     continue
 
                 language_documents_seen[resolved_language] += 1
-                if language_counts[resolved_language] >= ctx.samples:
+                if effective_language_count(resolved_language) >= ctx.samples:
                     language_documents_skipped[resolved_language] += 1
                     documents += 1
                     continue
@@ -250,21 +277,21 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
                     language_short_documents[resolved_language] += 1
 
                 batch_collector.add(resolved_language, chunk)
-                remaining_quota = ctx.samples - language_counts[resolved_language]
+                remaining_quota = ctx.samples - effective_language_count(resolved_language)
                 if batch_collector.should_flush(resolved_language, remaining_quota):
                     flush_language(resolved_language)
                 documents += 1
 
             flush_languages(dataset_target_languages)
         flush_languages(languages)
+        drain_all_inflight_batches()
     finally:
-        if phonemizer_supervisor is not None:
-            phonemizer_supervisor.close()
+        transform_pool.close()
 
     log_progress()
     logger.info(f"final raw language counts seen: {dict(raw_language_counts)}")
-    if phonemizer_failure_counts:
-        logger.info(f"final transform failure counts: {dict(phonemizer_failure_counts)}")
+    if transform_failure_counts:
+        logger.info(f"final transform failure counts: {dict(transform_failure_counts)}")
     missing_languages = {
         language: ctx.samples - count
         for language, count in language_counts.items()
