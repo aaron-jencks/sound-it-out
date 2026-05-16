@@ -1,3 +1,4 @@
+import os
 import logging
 from pathlib import Path
 from typing import Optional, Tuple, Union
@@ -11,6 +12,27 @@ logger = logging.getLogger(__file__)
 PREPROCESSED_FEATURES = ("input_ids", "attention_mask", "labels")
 
 
+def configure_hf_cache(cache_loc: Path) -> Path:
+    cache_root = cache_loc.resolve()
+    datasets_cache = cache_root / "datasets"
+    hub_cache = cache_root / "hub"
+
+    datasets_cache.mkdir(parents=True, exist_ok=True)
+    hub_cache.mkdir(parents=True, exist_ok=True)
+
+    os.environ["HF_HOME"] = str(cache_root)
+    os.environ["HF_DATASETS_CACHE"] = str(datasets_cache)
+    os.environ["HF_HUB_CACHE"] = str(hub_cache)
+
+    logger.info(
+        "configured Hugging Face cache paths: HF_HOME=%s HF_DATASETS_CACHE=%s HF_HUB_CACHE=%s",
+        cache_root,
+        datasets_cache,
+        hub_cache,
+    )
+    return datasets_cache
+
+
 def load_hf_dataset(
         definition: Union[DatasetConfig, ConstructionInputDatasetConfig],
         streaming: bool = True,
@@ -18,7 +40,7 @@ def load_hf_dataset(
 ) -> Union[IterableDataset, Dataset]:
     kwargs = {"streaming": streaming}
     if cache_loc is not None:
-        kwargs["cache_dir"] = str(cache_loc)
+        kwargs["cache_dir"] = str(configure_hf_cache(cache_loc))
     if definition.subset is None:
         logger.info(f'loading {definition.name} from HF dataset.')
         dataset = load_dataset(
