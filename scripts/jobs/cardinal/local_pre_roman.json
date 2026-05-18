@@ -3,7 +3,7 @@
                 "hf_cache": "/fs/scratch/PAS2836/ipa_gpt/cache"
         },
         "transform": {
-                "transform_worker_count": 48
+                "transform_worker_count": 1
         },
         "transform_batch_size": 1,
         "cpus": 96
