@@ -5,6 +5,6 @@
         "transform": {
                 "transform_worker_count": 48
         },
-        "transform_batch_size": 8,
+        "transform_batch_size": 1,
         "cpus": 96
 }
