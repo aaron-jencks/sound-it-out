@@ -1,0 +1,42 @@
+{
+  "output_dataset": {
+    "name": "preprocessed_romanized_local_debug_dataset"
+  },
+  "transform": {
+    "transform_worker_count": 1,
+    "romanization": {
+      "uroman_path": "/home/aaron/Documents/workspace/research/kumar/uroman-1.2.8/bin/uroman.pl"
+    }
+  },
+  "samples": 100,
+  "transform_batch_size": 1,
+  "input_datasets": [
+    {
+      "name": "mugezhang/8lang_multirepr_pretrain_interleaved",
+      "split": "train",
+      "streaming": true,
+      "output_feature": "text",
+      "language_feature": "language",
+      "languages": [
+        "eng",
+        "spa",
+        "rus",
+        "pol",
+        "hin",
+        "urd",
+        "mal",
+        "tam"
+      ],
+      "language_map": {
+        "eng": "en-us",
+        "spa": "es",
+        "rus": "ru",
+        "pol": "pl",
+        "hin": "hi",
+        "urd": "ur",
+        "mal": "ml",
+        "tam": "ta"
+      }
+    }
+  ]
+}
