@@ -5,7 +5,7 @@
 #SBATCH --error=/fs/ess/PAS2836/ipa_gpt/jobs/logs/errors/%x-%j.err
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=96
-#SBATCH --time=2-00:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --partition=cpu
 
@@ -32,7 +32,7 @@ export HF_DATASETS_CACHE="$cache_dir/datasets"
 
 cd "$scratch_github_prefix/sound-it-out"
 echo "copying local config to dir"
-cp "scripts/jobs/cardinal/local_pre.json" "src/transcription/p2g/config/local.json"
+cp "scripts/jobs/cardinal/local_pre_roman.json" "src/transcription/p2g/config/local.json"
 if [ $? -ne 0 ]; then
         echo "failed to copy local file"
         exit 1
