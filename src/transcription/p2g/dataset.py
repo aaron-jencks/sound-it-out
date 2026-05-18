@@ -234,7 +234,7 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
 
             for document in ds:
                 drain_completed_batches()
-                if documents % 10000 == 0:
+                if documents % (ctx.transform_batch_size * len(languages)) == 0:
                     log_progress()
                     observed_languages = sum(1 for count in language_documents_seen.values() if count > 0)
                     logger.info(f"there are {observed_languages}/{len(languages)} target languages observed so far")
