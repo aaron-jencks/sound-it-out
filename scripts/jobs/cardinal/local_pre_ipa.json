@@ -2,5 +2,8 @@
         "dataset": {
                 "hf_cache": "/fs/scratch/PAS2836/ipa_gpt/cache"
         },
+        "transform": {
+                "transform_worker_count": 16
+        },
         "cpus": 96
 }

@@ -67,10 +67,11 @@ def extract_word_chunk(text: str, words_per_sample: int) -> Tuple[str, bool]:
 
 
 def build_transform_pool(ctx: PreprocessingConfig) -> TransformPoolSupervisor:
+    worker_count = ctx.cpus if ctx.transform.transform_worker_count <= 0 else ctx.transform.transform_worker_count
     if ctx.transform.type == "phonemize":
         return TransformPoolSupervisor(
             transform_type="phonemize",
-            worker_count=ctx.cpus,
+            worker_count=worker_count,
             timeout_seconds=30,
             espeak_path=ctx.transform.espeak_path,
         )
@@ -80,7 +81,7 @@ def build_transform_pool(ctx: PreprocessingConfig) -> TransformPoolSupervisor:
             raise ValueError("romanization config is required when transform.type is 'romanize'")
         return TransformPoolSupervisor(
             transform_type="romanize",
-            worker_count=ctx.cpus,
+            worker_count=worker_count,
             timeout_seconds=30,
             uroman_path=ctx.transform.romanization.uroman_path,
             perl_path=ctx.transform.romanization.perl_path,

@@ -64,6 +64,7 @@ class TransformationConfig(BaseModel):
     type: Literal["phonemize", "romanize"]
     espeak_path: Optional[Path] = None
     romanization: Optional[RomanizationConfig] = None
+    transform_worker_count: int = -1
 
 
 class SplitRatioConfig(BaseModel):
