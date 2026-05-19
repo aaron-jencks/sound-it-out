@@ -1,4 +1,5 @@
 {
+  "hf_cache": "/fs/scratch/PAS2836/ipa_gpt/cache",
   "model": {
     "hyperparameters": {
       "per_device_train_batch_size": 64,
