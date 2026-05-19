@@ -26,7 +26,10 @@ esac
 CONFIG_ARGS=("${MODE_CONFIG}")
 LOCAL_CONFIG="transcription/p2g/config/local.json"
 if [[ -f "${SRC_ROOT}/${LOCAL_CONFIG}" ]]; then
+  echo "using local config"
   CONFIG_ARGS+=("${LOCAL_CONFIG}")
+else
+  echo "no local config found"
 fi
 
 cd "${SRC_ROOT}"
