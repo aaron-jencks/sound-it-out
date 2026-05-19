@@ -56,12 +56,12 @@ def load_hf_dataset(
     return dataset
 
 
-def validate_preprocessed_dataset(ds: Dataset, split_name: str, source: str) -> None:
+def validate_preprocessed_dataset(ds: Dataset, source: str) -> None:
     missing = [feature for feature in PREPROCESSED_FEATURES if feature not in ds.column_names]
     if missing:
         missing_features = ", ".join(missing)
         raise RuntimeError(
-            f"{source} split '{split_name}' is not preprocessed; missing columns: {missing_features}"
+            f"{source} is not preprocessed; missing columns: {missing_features}"
         )
 
 
@@ -71,7 +71,7 @@ def load_saved_dataset(definition: DatasetConfig, prefix: Path) -> Dataset:
         raise FileNotFoundError(f"dataset artifact does not exist: {dataset_path}")
 
     output_ds = load_from_disk(str(dataset_path))
-    if isinstance(output_ds, DatasetDict):
+    if definition.split is not None and isinstance(output_ds, DatasetDict):
         if definition.split not in output_ds:
             available_splits = ", ".join(sorted(output_ds.keys()))
             raise RuntimeError(
@@ -82,7 +82,7 @@ def load_saved_dataset(definition: DatasetConfig, prefix: Path) -> Dataset:
     else:
         ds = output_ds
 
-    validate_preprocessed_dataset(ds, definition.split, str(dataset_path))
+    validate_preprocessed_dataset(ds, str(dataset_path))
     return ds
 
 

@@ -28,7 +28,7 @@ class ModelConfig(BaseModel):
 
 class DatasetMetaConfig(BaseModel):
     name: str
-    split: str
+    split: Optional[str] = None
     subset: Optional[str] = None
     languages: List[str]
     language_map: Optional[Dict[str, str]] = None
@@ -85,7 +85,6 @@ class CoreConfig(BaseModel):
 
 
 class PreprocessingConfig(CoreConfig):
-    tokenizer: TokenizerConfig
     output_dataset: NamedFullDatasetFeatureConfig
     input_datasets: List[ConstructionInputDatasetConfig]
     words_per_sample: int
@@ -94,6 +93,11 @@ class PreprocessingConfig(CoreConfig):
     shuffle_buffer: int
     transform_batch_size: int
     splits: SplitRatioConfig
+
+
+class TokenizingConfig(CoreConfig):
+    model: ModelConfig
+    target_dataset: NamedFullDatasetFeatureConfig
 
 
 class EvaluationConfig(CoreConfig):
