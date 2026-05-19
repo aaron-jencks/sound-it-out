@@ -1,8 +1,13 @@
+import datetime
 from typing import List, Optional
 
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 from transcription.p2g.config import EvaluationConfig
+
+
+def get_timestamp_string(dt: Optional[datetime.datetime] = None) -> str:
+    return (dt if dt is not None else datetime.datetime.now()).strftime("%Y-%m-%d-%H-%M-%S")
 
 
 def format_language_marker(s: str) -> str:

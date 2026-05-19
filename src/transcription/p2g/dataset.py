@@ -8,6 +8,7 @@ from typing import Optional, Tuple
 from datasets import Dataset, DatasetDict
 from transformers import set_seed
 
+from transcription.p2g.common import get_timestamp_string
 from transcription.p2g.config import ConstructionInputDatasetConfig, PreprocessingConfig
 from transcription.p2g.dataset_loading import load_hf_dataset
 from transcription.p2g.setup import parse_args
@@ -24,7 +25,7 @@ logger = logging.getLogger(__file__)
 
 def get_dataset_path(ctx: PreprocessingConfig) -> Tuple[datetime, Path]:
     dt = datetime.now()
-    dir_name = f"{dt.isoformat()}-{ctx.output_dataset.name}"
+    dir_name = f"{get_timestamp_string(dt)}-{ctx.output_dataset.name}"
     output_path_name = ctx.hf_cache / dir_name
     return dt, output_path_name
 
@@ -111,7 +112,7 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
     if ctx.output_dataset.language_feature is None:
         raise ValueError("output_dataset.language_feature cannot be None for construction")
     output_dt, output_path_name = get_dataset_path(ctx)
-    logger.info(f"building dataset artifact for timestamp {output_dt.isoformat()}")
+    logger.info(f"building dataset artifact for timestamp {get_timestamp_string(output_dt)}")
     logger.info(f"dataset will be written to {output_path_name}")
 
     transform_pool = build_transform_pool(ctx)
