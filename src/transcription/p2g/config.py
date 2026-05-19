@@ -96,8 +96,8 @@ class PreprocessingConfig(CoreConfig):
 
 
 class TokenizingConfig(CoreConfig):
-    model: ModelConfig
-    target_dataset: NamedFullDatasetFeatureConfig
+    tokenizer: TokenizerConfig
+    target_dataset: DatasetConfig
 
 
 class EvaluationConfig(CoreConfig):

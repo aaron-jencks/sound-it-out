@@ -1,0 +1,19 @@
+{
+  "tokenizer": {
+    "name": "google/byt5-small",
+    "max_sequence_length": 1024
+  },
+  "target_dataset": {
+    "output_feature": "text",
+    "language_feature": "language",
+    "languages": [
+      "en-us", "es",
+      "ru", "pl",
+      "hi", "ur",
+      "ml", "ta"
+    ],
+    "language_map": {
+      "en-us": "en"
+    }
+  }
+}
