@@ -16,7 +16,7 @@ from transcription.p2g.config import (
     PreprocessingConfig,
     TrainConfig,
     generate_argparse,
-    load_configs,
+    load_configs, TokenizerConfig,
 )
 
 
@@ -63,7 +63,7 @@ def setup_wandb(ctx: EvaluationConfig):
     )
 
 
-def setup_tokenizer(ctx: EvaluationConfig, model: Optional[AutoModelForSeq2SeqLM],
+def setup_tokenizer(ctx: TokenizerConfig, model: Optional[AutoModelForSeq2SeqLM],
         train_ds: Optional[Dataset], eval_ds: Optional[Dataset],
         train_ds_def: Optional[DatasetConfig] = None,
         eval_ds_def: Optional[DatasetConfig] = None
@@ -73,12 +73,14 @@ def setup_tokenizer(ctx: EvaluationConfig, model: Optional[AutoModelForSeq2SeqLM
     if train_ds_def is not None:
         if train_ds_def.language_map is not None:
             languages.update(train_ds_def.language_map.values())
+            languages.update([lang for lang in train_ds_def.languages if lang not in train_ds_def.language_map])
         else:
             languages.update(train_ds_def.languages)
 
     if eval_ds_def is not None:
         if eval_ds_def.language_map is not None:
             languages.update(eval_ds_def.language_map.values())
+            languages.update([lang for lang in eval_ds_def.languages if lang not in eval_ds_def.language_map])
         else:
             languages.update(eval_ds_def.languages)
 
