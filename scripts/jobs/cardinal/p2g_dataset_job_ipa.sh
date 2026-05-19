@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=p2g_dataset_generation_roman
+#SBATCH --job-name=p2g_dataset_generation_ipa
 #SBATCH --account=PAS2836
 #SBATCH --output=/fs/ess/PAS2836/ipa_gpt/jobs/logs/%x-%j.out
 #SBATCH --error=/fs/ess/PAS2836/ipa_gpt/jobs/logs/errors/%x-%j.err
@@ -32,10 +32,10 @@ export HF_DATASETS_CACHE="$cache_dir/datasets"
 
 cd "$scratch_github_prefix/sound-it-out"
 echo "copying local config to dir"
-cp "scripts/jobs/cardinal/local_pre_roman.json" "src/transcription/p2g/config/local.json"
+cp "scripts/jobs/cardinal/p2g_local_pre_ipa.json" "src/transcription/p2g/config/local.json"
 if [ $? -ne 0 ]; then
         echo "failed to copy local file"
         exit 1
 fi
 echo "starting script"
-./scripts/build_p2g_dataset.sh roman
+./scripts/build_p2g_dataset.sh ipa
