@@ -1,3 +1,4 @@
+import datetime as dt
 import logging
 from pathlib import Path
 from typing import Optional, Tuple
@@ -11,6 +12,7 @@ from transformers import AutoTokenizer, DataCollatorForSeq2Seq, set_seed, \
 from transformers.utils import is_flash_attn_2_available
 import wandb
 
+from transcription.p2g.common import get_timestamp_string
 from transcription.p2g.config import DatasetConfig, TrainConfig
 from transcription.p2g.dataset_loading import load_existing_dataset
 from transcription.p2g.setup import parse_args, setup_model, setup_tokenizer, setup_wandb
@@ -19,14 +21,26 @@ from transcription.p2g.setup import parse_args, setup_model, setup_tokenizer, se
 logger = logging.getLogger(__file__)
 
 
+def get_checkpoint_path(ctx: TrainConfig, ts: dt.datetime) -> Path:
+    dname = f"{get_timestamp_string(ts)}-{ctx.run_name}"
+    return ctx.model.checkpoint_prefix / dname
+
+
 def generate_trainer(
         ctx: TrainConfig,
         train_ds: Optional[Dataset], eval_ds: Optional[Dataset],
         train_ds_def: Optional[DatasetConfig] = None,
         eval_ds_def: Optional[DatasetConfig] = None,
-        model_checkpoint: Optional[Path] = None
-) -> Tuple[Trainer, AutoTokenizer]:
+        model_checkpoint: Optional[Path] = None,
+        run_timestamp: Optional[dt.datetime] = None,
+) -> Tuple[Trainer, AutoTokenizer, dt.datetime]:
     logger.info('setting up training pipeline')
+
+    if run_timestamp is None:
+        run_timestamp = dt.datetime.now()
+
+    path_dt = get_timestamp_string(run_timestamp)
+    logger.info(f"timestamp for this run will be: {path_dt}")
 
     if train_ds is None and eval_ds is None:
         raise ValueError("train_ds and eval_ds cannot both be None")
@@ -123,8 +137,11 @@ def generate_trainer(
             "rougeLsum": round(rouge_score["rougeLsum"], 4),
         }
 
+    checkpoint_prefix = get_checkpoint_path(ctx, run_timestamp)
+    logger.info(f"saving checkpoint to {checkpoint_prefix}")
+
     training_args = Seq2SeqTrainingArguments(
-        output_dir=str(ctx.model.checkpoint_prefix),
+        output_dir=str(checkpoint_prefix),
         load_best_model_at_end=True,
         predict_with_generate=True,
         report_to="wandb",
@@ -141,20 +158,23 @@ def generate_trainer(
         processing_class=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
-    ), tokenizer
+    ), tokenizer, run_timestamp
 
 
 def train(ctx: TrainConfig):
     logger.info("loading existing dataset")
     train_ds, train_ds_config, eval_ds, eval_ds_config = load_existing_dataset(ctx)
 
-    trainer, _ = generate_trainer(ctx, train_ds, eval_ds, train_ds_config, eval_ds_config)
+    trainer, _, rts = generate_trainer(ctx, train_ds, eval_ds, train_ds_config, eval_ds_config)
 
     if ctx.wandb.enabled:
         setup_wandb(ctx)
 
     trainer.train()
-    trainer.save_model(str(ctx.model.checkpoint_prefix / 'best'))
+
+    checkpoint_prefix = get_checkpoint_path(ctx, rts) / 'best'
+    trainer.save_model(str(checkpoint_prefix))
+    logger.info(f"saving best checkpoint to {checkpoint_prefix}")
 
     if ctx.wandb.enabled:
         wandb.finish()

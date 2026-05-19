@@ -23,14 +23,15 @@
       "metric_for_best_model": "bleu",
       "logging_steps": 0.01
     },
-    "checkpoint_prefix": "transcription/p2g/checkpoints",
     "generation": {
       "max_new_tokens": 128,
       "do_sample": false,
       "num_beams": 4
     },
-    "supports_bf16": true
+    "supports_bf16": true,
+    "checkpoint_prefix": "transcription/p2g/checkpoints"
   },
+  "results_prefix": "transcription/p2g/results",
   "wandb": {
     "enabled": true,
     "project": "ipa-p2g",
