@@ -69,6 +69,8 @@ def generate_trainer(
     )
 
     bleu_metric = evaluate.load('sacrebleu')
+    chrf_metric = evaluate.load('chrf')
+    rouge_metric = evaluate.load('rouge')
 
     def compute_metrics(eval_pred):
         predictions, labels = eval_pred
@@ -85,6 +87,20 @@ def generate_trainer(
         decoded_preds = [pred.strip() for pred in decoded_preds]
         decoded_labels = [label.strip() for label in decoded_labels]
 
+        chrf_score = chrf_metric.compute(
+            predictions=decoded_preds,
+            references=decoded_labels,
+            word_order=0,
+            char_order=0,
+            beta=2
+        )
+
+        rouge_score = rouge_metric.compute(
+            predictions=decoded_preds,
+            references=decoded_labels,
+            use_stemmer=True,
+        )
+
         # sacrebleu expects references as list[list[str]]
         decoded_labels = [[label] for label in decoded_labels]
 
@@ -100,6 +116,11 @@ def generate_trainer(
         return {
             "bleu": round(result["score"], 4),
             "gen_len": round(float(np.mean(prediction_lens)), 4),
+            "chrf": round(chrf_score["score"], 4),
+            "rouge1": round(rouge_score["rouge1"], 4),
+            "rouge2": round(rouge_score["rouge2"], 4),
+            "rougeL": round(rouge_score["rougeL"], 4),
+            "rougeLsum": round(rouge_score["rougeLsum"], 4),
         }
 
     training_args = Seq2SeqTrainingArguments(
