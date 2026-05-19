@@ -1,0 +1,15 @@
+{
+  "model": {
+    "hyperparameters": {
+      "per_device_train_batch_size": 64,
+      "per_device_eval_batch_size": 256
+    }
+  },
+  "train_dataset": {
+    "name": "2026-05-17T22:35:17.800434-preprocessed_ipa_dataset-tokenized"
+  },
+  "evaluation_dataset": {
+    "name": "2026-05-17T22:35:17.800434-preprocessed_ipa_dataset-tokenized"
+  },
+  "cpus": 16
+}

@@ -75,7 +75,7 @@ def generate_trainer(
             setattr(model.generation_config, k, v)
 
     # noinspection PyTypeChecker
-    tokenizer = setup_tokenizer(ctx, model, train_ds, eval_ds, train_ds_def, eval_ds_def)
+    tokenizer = setup_tokenizer(ctx.model.tokenizer, model, train_ds, eval_ds, train_ds_def, eval_ds_def)
 
     data_collator = DataCollatorForSeq2Seq(
         tokenizer=tokenizer,
