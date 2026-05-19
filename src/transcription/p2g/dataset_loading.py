@@ -65,8 +65,8 @@ def validate_preprocessed_dataset(ds: Dataset, split_name: str, source: str) -> 
         )
 
 
-def load_saved_dataset(definition: DatasetConfig) -> Dataset:
-    dataset_path = Path(definition.name)
+def load_saved_dataset(definition: DatasetConfig, prefix: Path) -> Dataset:
+    dataset_path = prefix / definition.name
     if not dataset_path.exists():
         raise FileNotFoundError(f"dataset artifact does not exist: {dataset_path}")
 
@@ -89,6 +89,6 @@ def load_saved_dataset(definition: DatasetConfig) -> Dataset:
 def load_existing_dataset(
         ctx: TrainConfig
 ) -> Tuple[Dataset, DatasetConfig, Dataset, DatasetConfig]:
-    train_ds = load_saved_dataset(ctx.train_dataset)
-    eval_ds = load_saved_dataset(ctx.evaluation_dataset)
+    train_ds = load_saved_dataset(ctx.train_dataset, ctx.hf_cache)
+    eval_ds = load_saved_dataset(ctx.evaluation_dataset, ctx.hf_cache)
     return train_ds, ctx.train_dataset, eval_ds, ctx.evaluation_dataset
