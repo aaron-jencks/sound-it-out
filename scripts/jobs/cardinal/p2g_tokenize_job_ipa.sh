@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=p2g_dataset_generation_ipa
+#SBATCH --job-name=p2g_tokenization_ipa
 #SBATCH --account=PAS2836
 #SBATCH --output=/fs/ess/PAS2836/ipa_gpt/jobs/logs/%x-%j.out
 #SBATCH --error=/fs/ess/PAS2836/ipa_gpt/jobs/logs/errors/%x-%j.err
