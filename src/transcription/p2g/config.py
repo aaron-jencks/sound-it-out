@@ -120,7 +120,7 @@ def load_configs(files: Optional[List[Path]], default_config: Path, schema: Type
 
 def generate_argparse(
         description: str = '',
-        default_config: Path = Path("transcription/p2g/config/default_train_eval.json"),
+        default_config: Path = Path("transcription/p2g/config/default_core.json"),
 ) -> ArgumentParser:
     parser = ArgumentParser(description=description)
     ag = parser.add_argument_group('cascading config files')

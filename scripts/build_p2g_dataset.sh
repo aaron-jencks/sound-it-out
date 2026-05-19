@@ -31,5 +31,5 @@ fi
 
 cd "${SRC_ROOT}"
 python -m transcription.p2g.dataset \
-  --default-config transcription/p2g/config/default_pre.json \
+  "transcription/p2g/config/default_pre.json" \
   "${CONFIG_ARGS[@]}"

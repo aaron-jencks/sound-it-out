@@ -10,8 +10,5 @@
   },
   "samples": 500000,
   "shuffle_buffer": 10000,
-  "transform_batch_size": 100,
-  "hf_cache": "transcription/p2g/cache/huggingface",
-  "random_seed": 42,
-  "cpus": -1
+  "transform_batch_size": 100
 }
