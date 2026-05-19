@@ -9,7 +9,7 @@ from datasets import Dataset, DatasetDict
 from transformers import set_seed
 
 from transcription.p2g.common import get_timestamp_string
-from transcription.p2g.config import ConstructionInputDatasetConfig, PreprocessingConfig
+from transcription.p2g.config import ConstructionInputDatasetConfig, PreprocessingConfig, DatasetMetaConfig
 from transcription.p2g.dataset_loading import load_hf_dataset
 from transcription.p2g.setup import parse_args
 from transcription.p2g.transform_batching import LanguageBatchCollector
@@ -37,7 +37,7 @@ def determine_eval_size(ctx: PreprocessingConfig, ds: Dataset) -> int | float:
     return ctx.splits.eval_ratio
 
 
-def resolve_language(definition: ConstructionInputDatasetConfig, source_language: str) -> str:
+def resolve_language(definition: DatasetMetaConfig, source_language: str) -> str:
     if definition.language_map is None:
         return source_language
     return definition.language_map.get(source_language, source_language)

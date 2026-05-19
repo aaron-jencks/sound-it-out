@@ -65,7 +65,7 @@ def validate_preprocessed_dataset(ds: Dataset, source: str) -> None:
         )
 
 
-def load_saved_dataset(definition: DatasetConfig, prefix: Path) -> Dataset:
+def load_saved_dataset(definition: DatasetConfig, prefix: Path, preprocessed: bool = True) -> Union[Dataset, DatasetDict]:
     dataset_path = prefix / definition.name
     if not dataset_path.exists():
         raise FileNotFoundError(f"dataset artifact does not exist: {dataset_path}")
@@ -82,7 +82,8 @@ def load_saved_dataset(definition: DatasetConfig, prefix: Path) -> Dataset:
     else:
         ds = output_ds
 
-    validate_preprocessed_dataset(ds, str(dataset_path))
+    if preprocessed:
+        validate_preprocessed_dataset(ds, str(dataset_path))
     return ds
 
 
