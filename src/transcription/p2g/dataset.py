@@ -308,6 +308,7 @@ def create_dataset(ctx: PreprocessingConfig) -> Path:
         )
 
     output_ds = Dataset.from_dict(final_dataset)
+    output_ds.save_to_disk(f"{str(output_path_name)}-pre-split")
     split_ds = split_dataset(ctx, output_ds)
     split_ds.save_to_disk(str(output_path_name))
     logger.info(f"dataset setup complete, dataset written to: {output_path_name}")
