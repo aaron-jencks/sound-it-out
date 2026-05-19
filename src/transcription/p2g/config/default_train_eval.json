@@ -36,6 +36,7 @@
     "project": "ipa-p2g",
     "settings": {}
   },
+  "hf_cache": "transcription/p2g/cache/huggingface",
   "random_seed": 42,
   "cpus": -1
 }

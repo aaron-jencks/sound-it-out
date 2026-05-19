@@ -79,6 +79,7 @@ class WandbConfig(BaseModel):
 
 
 class CoreConfig(BaseModel):
+    hf_cache: Path
     random_seed: int
     cpus: int
 
@@ -92,7 +93,6 @@ class PreprocessingConfig(CoreConfig):
     samples: int
     shuffle_buffer: int
     transform_batch_size: int
-    hf_cache: Path
     splits: SplitRatioConfig
 
 
@@ -120,7 +120,7 @@ def load_configs(files: Optional[List[Path]], default_config: Path, schema: Type
 
 def generate_argparse(
         description: str = '',
-        default_config: Path = Path("transcription/p2g/config/default.json"),
+        default_config: Path = Path("transcription/p2g/config/default_train_eval.json"),
 ) -> ArgumentParser:
     parser = ArgumentParser(description=description)
     ag = parser.add_argument_group('cascading config files')
