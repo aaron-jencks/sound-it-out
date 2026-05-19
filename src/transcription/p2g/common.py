@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-from transcription.p2g.config import EvaluationConfig
+from transcription.p2g.config import TokenizerConfig
 
 
 def get_timestamp_string(dt: Optional[datetime.datetime] = None) -> str:
@@ -14,10 +14,10 @@ def format_language_marker(s: str) -> str:
     return f"<lang:{s}>"
 
 
-def load_tokenizer(ctx: EvaluationConfig, model: Optional[AutoModelForSeq2SeqLM], extra_langs: List[str]) -> AutoTokenizer:
+def load_tokenizer(ctx: TokenizerConfig, model: Optional[AutoModelForSeq2SeqLM], extra_langs: List[str]) -> AutoTokenizer:
     # noinspection PyTypeChecker
     tok = AutoTokenizer.from_pretrained(
-        ctx.model.tokenizer.name,
+        ctx.name,
         use_fast=True,
     )
     tok.add_special_tokens({
