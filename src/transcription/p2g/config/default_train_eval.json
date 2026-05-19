@@ -51,7 +51,7 @@
       "en-us": "en"
     }
   },
-  "eval_dataset": {
+  "evaluation_dataset": {
     "output_feature": "text",
     "language_feature": "language",
     "split": "test",
