@@ -1,0 +1,9 @@
+{
+  "tokenizer": {
+    "max_sequence_length": 512
+  },
+  "target_dataset": {
+    "name": "2026-05-18T07:30:56.628285-preprocessed_romanized_dataset",
+    "input_feature": "romanized"
+  }
+}

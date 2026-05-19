@@ -15,7 +15,7 @@ case "${MODE}" in
     MODE_CONFIG="transcription/p2g/config/roman_tokenize.json"
     ;;
   *)
-    echo "usage: $(basename "$0") [ipa|roman|debug]" >&2
+    echo "usage: $(basename "$0") [ipa|roman]" >&2
     exit 1
     ;;
 esac
