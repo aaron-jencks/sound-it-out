@@ -97,6 +97,7 @@ class PreprocessingConfig(CoreConfig):
 
 
 class EvaluationConfig(CoreConfig):
+    run_name: str
     model: ModelConfig
     evaluation_dataset: DatasetConfig
     results_prefix: Path

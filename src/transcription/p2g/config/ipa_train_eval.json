@@ -1,4 +1,5 @@
 {
+  "run_name": "ipa_training",
   "model": {
     "tokenizer": {
       "max_sequence_length": 512
@@ -13,7 +14,7 @@
     }
   },
   "train_dataset": {
-    "name": "preprocessed_ipa_dataset",
+    "name": "2026-05-17T22:35:17.800434-preprocessed_ipa_dataset",
     "input_feature": "ipa",
     "output_feature": "text",
     "language_feature": "language",
@@ -36,7 +37,7 @@
     }
   },
   "evaluation_dataset": {
-    "name": "preprocessed_ipa_dataset",
+    "name": "2026-05-17T22:35:17.800434-preprocessed_ipa_dataset",
     "input_feature": "ipa",
     "output_feature": "text",
     "language_feature": "language",
