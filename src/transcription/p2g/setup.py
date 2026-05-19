@@ -39,7 +39,7 @@ def setup_logging(debug: bool = False):
 def parse_args(
         description: str,
         schema: Type[TConfig] = TrainConfig,
-        default_config: Path = Path("transcription/p2g/config/default.json"),
+        default_config: Path = Path("transcription/p2g/config/default_core.json"),
 ) -> TConfig:
     ap = generate_argparse(description, default_config)
     args = ap.parse_args()
