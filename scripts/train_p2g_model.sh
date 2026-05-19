@@ -30,3 +30,5 @@ cd "${SRC_ROOT}"
 python -m transcription.p2g.train_t5 \
   "transcription/p2g/config/default_train_eval.json" \
   "${CONFIG_ARGS[@]}"
+
+# python train_t5.py config/default_train_eval.json config/ipa_train_eval.json config/local_train.json

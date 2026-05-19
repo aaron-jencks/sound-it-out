@@ -1,0 +1,16 @@
+{
+  "hf_cache": "/fs/scratch/PAS2836/ipa_gpt/cache",
+  "model": {
+    "hyperparameters": {
+      "per_device_train_batch_size": 128,
+      "per_device_eval_batch_size": 256
+    }
+  },
+  "train_dataset": {
+    "name": "2026-05-18T07:30:56.628285-preprocessed_romanized_dataset-tokenized"
+  },
+  "evaluation_dataset": {
+    "name": "2026-05-18T07:30:56.628285-preprocessed_romanized_dataset-tokenized"
+  },
+  "cpus": 16
+}

@@ -1,5 +1,5 @@
 {
-  "run_name": "ipa_training",
+  "run_name": "roman_training",
   "model": {
     "tokenizer": {
       "max_sequence_length": 512
@@ -14,9 +14,9 @@
     }
   },
   "train_dataset": {
-    "input_feature": "ipa"
+    "input_feature": "romanized"
   },
   "evaluation_dataset": {
-    "input_feature": "ipa"
+    "input_feature": "romanized"
   }
 }

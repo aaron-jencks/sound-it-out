@@ -36,5 +36,33 @@
     "enabled": true,
     "project": "ipa-p2g",
     "settings": {}
+  },
+  "train_dataset": {
+    "output_feature": "text",
+    "language_feature": "language",
+    "split": "train",
+    "languages": [
+      "en-us", "es",
+      "ru", "pl",
+      "hi", "ur",
+      "ml", "ta"
+    ],
+    "language_map": {
+      "en-us": "en"
+    }
+  },
+  "eval_dataset": {
+    "output_feature": "text",
+    "language_feature": "language",
+    "split": "test",
+    "languages": [
+      "en-us", "es",
+      "ru", "pl",
+      "hi", "ur",
+      "ml", "ta"
+    ],
+    "language_map": {
+      "en-us": "en"
+    }
   }
 }
