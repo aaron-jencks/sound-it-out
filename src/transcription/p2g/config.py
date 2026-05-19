@@ -105,7 +105,7 @@ class EvaluationConfig(CoreConfig):
 
 class TrainConfig(EvaluationConfig):
     train_dataset: DatasetConfig
-    grid_search: GridSearchConfig
+    grid_search: Optional[GridSearchConfig] = None
 
 
 def load_configs(files: Optional[List[Path]], default_config: Path, schema: Type[BaseModel] = TrainConfig) -> BaseModel:
