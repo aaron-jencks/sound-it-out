@@ -105,7 +105,7 @@ def generate_trainer(
             predictions=decoded_preds,
             references=decoded_labels,
             word_order=0,
-            char_order=0,
+            char_order=6,
             beta=2
         )
 
